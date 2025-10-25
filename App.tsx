@@ -53,6 +53,12 @@ const QUEEN_POOL: Omit<Queen, 'trackRecord' | 'status' | 'confessionals'>[] = [
   { id: 22, dexId: 368, name: "Gorebyss Andrews", originalName: 'Gorebyss', personality: "Fishy Queen", entranceLine: "I'm wet. Are you?", stats: { acting: 5, improv: 4, comedy: 3, dance: 6, design: 8, singing: 5, rusical: 6, rumix: 6, makeover: 9, lipsync: 7 } },
   { id: 23, dexId: 754, name: "Lurantis Michaels", originalName: 'Lurantis', personality: "Professional", entranceLine: "I didn't come to play, I came to slay.", stats: { acting: 7, improv: 6, comedy: 5, dance: 9, design: 8, singing: 5, rusical: 7, rumix: 8, makeover: 7, lipsync: 9 } },
   { id: 24, dexId: 542, name: "Leavanny Vuitton", originalName: 'Leavanny', personality: "Seamstress", entranceLine: "I hope you girls are ready to be schooled in fashion.", stats: { acting: 4, improv: 3, comedy: 3, dance: 5, design: 10, singing: 4, rusical: 5, rumix: 4, makeover: 10, lipsync: 5 } },
+  { id: 25, dexId: 700, name: "Sylveon Royale", originalName: 'Sylveon', personality: "Pastel Princess", entranceLine: "Sweet looks, sharper tongue.", stats: { acting: 7, improv: 6, comedy: 6, dance: 7, design: 9, singing: 6, rusical: 7, rumix: 8, makeover: 8, lipsync: 9 } },
+  { id: 26, dexId: 581, name: "Swanna Fontaine", originalName: 'Swanna', personality: "Glamazon", entranceLine: "From the runway to the runway, I never leave.", stats: { acting: 6, improv: 5, comedy: 4, dance: 9, design: 8, singing: 7, rusical: 8, rumix: 7, makeover: 6, lipsync: 8 } },
+  { id: 27, dexId: 830, name: "Eldegoss Dior", originalName: 'Eldegoss', personality: "Earthy Icon", entranceLine: "I'm eco-friendly and ego-unfriendly.", stats: { acting: 8, improv: 7, comedy: 6, dance: 5, design: 9, singing: 8, rusical: 7, rumix: 6, makeover: 9, lipsync: 6 } },
+  { id: 28, dexId: 308, name: "Medicham Michaels", originalName: 'Medicham', personality: "Zen Assassin", entranceLine: "Namaste? Nah, I'm here to slay.", stats: { acting: 6, improv: 7, comedy: 5, dance: 10, design: 6, singing: 5, rusical: 8, rumix: 9, makeover: 6, lipsync: 9 } },
+  { id: 29, dexId: 350, name: "Feebas Fabulosa", originalName: 'Feebas', personality: "Glow-Up Queen", entranceLine: "From drab to FAB, watch the evolution.", stats: { acting: 5, improv: 6, comedy: 7, dance: 5, design: 7, singing: 6, rusical: 6, rumix: 7, makeover: 8, lipsync: 7 } },
+  { id: 30, dexId: 869, name: "Alcremie Ganache", originalName: 'Alcremie', personality: "Dessert Diva", entranceLine: "I'm the sugar rush that'll rot your chances.", stats: { acting: 6, improv: 6, comedy: 7, dance: 5, design: 9, singing: 8, rusical: 7, rumix: 6, makeover: 9, lipsync: 7 } },
 ];
 
 type Phase = 'SETUP' | 'CAST_SELECTION' | 'ENTRANCES' | 'PROMO' | 'CHALLENGE_SELECTION' | 'CHALLENGE_INTRO' | 'PERFORMANCE' | 'JUDGING' | 'UNTUCKED' | 'LIPSYNC' | 'ELIMINATION' | 'FINALE' | 'SEASON_OVER';
@@ -178,6 +184,93 @@ const getConfessional = (queen: Queen, placement: Placement, phase: Phase, chall
     return pool[Math.floor(Math.random() * pool.length)];
 }
 
+const PLACEMENT_POINTS: Record<Placement, number> = {
+    WIN: 5,
+    TOP2: 4.5,
+    HIGH: 4,
+    SAFE: 3,
+    LOW: 2,
+    BTM2: 1,
+    ELIM: 0,
+    'RUNNER-UP': 0,
+    'WINNER': 0,
+    'N/A': 0,
+    '': 0
+};
+
+const COMPETITIVE_PLACEMENTS: Placement[] = ['WIN', 'TOP2', 'HIGH', 'SAFE', 'LOW', 'BTM2', 'ELIM'];
+
+const calculatePPE = (trackRecord: Placement[]): number => {
+    const { totalScore, competitiveEpisodes } = trackRecord.reduce(
+        (acc, placement) => {
+            if (COMPETITIVE_PLACEMENTS.includes(placement)) {
+                return {
+                    totalScore: acc.totalScore + (PLACEMENT_POINTS[placement] || 0),
+                    competitiveEpisodes: acc.competitiveEpisodes + 1
+                };
+            }
+            return acc;
+        },
+        { totalScore: 0, competitiveEpisodes: 0 }
+    );
+
+    if (competitiveEpisodes === 0) return 0;
+    return parseFloat((totalScore / competitiveEpisodes).toFixed(2));
+};
+
+const summarizePlacements = (trackRecord: Placement[]) => {
+    const summary = {
+        wins: 0,
+        top2: 0,
+        highs: 0,
+        safes: 0,
+        lows: 0,
+        bottoms: 0,
+        elims: 0,
+        ppe: calculatePPE(trackRecord),
+        competitiveEpisodes: 0
+    };
+
+    trackRecord.forEach((placement) => {
+        switch (placement) {
+            case 'WIN':
+                summary.wins += 1;
+                summary.competitiveEpisodes += 1;
+                break;
+            case 'TOP2':
+                summary.top2 += 1;
+                summary.competitiveEpisodes += 1;
+                break;
+            case 'HIGH':
+                summary.highs += 1;
+                summary.competitiveEpisodes += 1;
+                break;
+            case 'SAFE':
+                summary.safes += 1;
+                summary.competitiveEpisodes += 1;
+                break;
+            case 'LOW':
+                summary.lows += 1;
+                summary.competitiveEpisodes += 1;
+                break;
+            case 'BTM2':
+                summary.bottoms += 1;
+                summary.competitiveEpisodes += 1;
+                break;
+            case 'ELIM':
+                summary.elims += 1;
+                summary.competitiveEpisodes += 1;
+                break;
+            default:
+                break;
+        }
+    });
+
+    return summary;
+};
+
+const formatPPE = (ppe: number) => (Number.isFinite(ppe) ? ppe.toFixed(2) : '0.00');
+
 // --- Main Component ---
 
 export default function PokeDragRaceSimulator() {
@@ -195,9 +288,16 @@ export default function PokeDragRaceSimulator() {
   const [challengeHistory, setChallengeHistory] = useState<Challenge[]>([]);
   const [doubleShantayUsed, setDoubleShantayUsed] = useState(false);
   const [splitPremiere, setSplitPremiere] = useState(false);
+  const [competitionFormat, setCompetitionFormat] = useState<'standard' | 'allStars'>('standard');
+  const [pendingLegacyElimination, setPendingLegacyElimination] = useState<{ winnerId: number; options: Queen[] } | null>(null);
 
   // --- Derived State ---
   const activeQueens = useMemo(() => cast.filter(q => q.status === 'active'), [cast]);
+  useEffect(() => {
+      if (competitionFormat === 'allStars' && splitPremiere) {
+          setSplitPremiere(false);
+      }
+  }, [competitionFormat, splitPremiere]);
   // For split premiere, we only want queens in the current episode's group
   const currentEpisodeQueens = useMemo(() => {
       if (splitPremiere && episodeCount === 1) return activeQueens.filter(q => q.group === 1);
@@ -213,6 +313,8 @@ export default function PokeDragRaceSimulator() {
       setPhase('CAST_SELECTION');
       setSelectedCastIds([]);
       setSplitPremiere(false);
+      setCompetitionFormat('standard');
+      setPendingLegacyElimination(null);
   }
 
   const toggleQueenSelection = (id: number) => {
@@ -253,6 +355,8 @@ export default function PokeDragRaceSimulator() {
       setCurrentStoryline(splitPremiere ? "The first group of queens arrives..." : "The workroom is quiet... for now.");
       setChallengeHistory([]);
       setDoubleShantayUsed(false);
+      setPendingLegacyElimination(null);
+      setActiveTab('game');
   };
 
   const nextPhase = () => {
@@ -304,9 +408,10 @@ export default function PokeDragRaceSimulator() {
 
   const generateInitialPlacements = () => {
     if (!currentChallenge) return;
-    
+
     const modifiers: Record<number, number> = {};
     const isSplitNonElim = splitPremiere && episodeCount <= 2;
+    const isAllStarsEpisode = competitionFormat === 'allStars' && !isSplitNonElim;
 
     // --- Untucked/Workroom Drama Generators that affect score ---
     currentEpisodeQueens.forEach(q => {
@@ -343,6 +448,20 @@ export default function PokeDragRaceSimulator() {
         if (count > 6) newPlacements[scoredQueens[3].id] = 'HIGH';
         // Others are safe, maybe a low if we want to scare them, but no BTM2
         if (count > 5) newPlacements[scoredQueens[count-1].id] = 'LOW';
+    } else if (isAllStarsEpisode) {
+        if (count >= 2) {
+            newPlacements[scoredQueens[0].id] = 'TOP2';
+            newPlacements[scoredQueens[1].id] = 'TOP2';
+        }
+        if (count > 4) {
+            newPlacements[scoredQueens[2].id] = 'HIGH';
+            if (count > 5) newPlacements[scoredQueens[3].id] = 'HIGH';
+        }
+        if (count > 3) newPlacements[scoredQueens[count - 3].id] = 'LOW';
+        if (count > 1) {
+            newPlacements[scoredQueens[count - 2].id] = 'BTM2';
+            newPlacements[scoredQueens[count - 1].id] = 'BTM2';
+        }
     } else {
         // Standard Format
         if (count <= 5) {
@@ -418,12 +537,17 @@ export default function PokeDragRaceSimulator() {
 
   const setupLipsync = () => {
     const isSplitNonElim = splitPremiere && episodeCount <= 2;
+    const isAllStarsEpisode = competitionFormat === 'allStars' && !isSplitNonElim;
     let pair: Queen[] = [];
-    
-    if (isSplitNonElim) {
+
+    if (isSplitNonElim || isAllStarsEpisode) {
         // Top 2 Lipsync
         pair = currentEpisodeQueens.filter(q => q.trackRecord[q.trackRecord.length - 1] === 'TOP2');
-        setCurrentStoryline(`Top 2 Lip Sync for the Win: ${pair[0]?.name} vs ${pair[1]?.name}!`);
+        setCurrentStoryline(
+            isAllStarsEpisode
+                ? `Lip Sync for Your Legacy: ${pair[0]?.name} vs ${pair[1]?.name}!`
+                : `Top 2 Lip Sync for the Win: ${pair[0]?.name} vs ${pair[1]?.name}!`
+        );
     } else {
         // Bottom 2 Lipsync
         pair = currentEpisodeQueens.filter(q => q.trackRecord[q.trackRecord.length - 1] === 'BTM2');
@@ -434,11 +558,42 @@ export default function PokeDragRaceSimulator() {
 
   const handleLipsyncWinner = (winnerId: number, doubleShantay: boolean = false) => {
     const isSplitNonElim = splitPremiere && episodeCount <= 2;
+    const isAllStarsEpisode = competitionFormat === 'allStars' && !isSplitNonElim;
 
-    if (doubleShantay && !isSplitNonElim) {
+    if (doubleShantay && !isSplitNonElim && !isAllStarsEpisode) {
         if (doubleShantayUsed) { alert("Already used!"); return; }
         setDoubleShantayUsed(true);
         setCurrentStoryline("Shantay you BOTH stay! (Double Shantay used)");
+        setPhase('ELIMINATION');
+        return;
+    }
+
+    if (isAllStarsEpisode) {
+        const winner = cast.find(c => c.id === winnerId);
+        const bottomQueens = currentEpisodeQueens.filter(q => q.trackRecord[q.trackRecord.length - 1] === 'BTM2');
+
+        setCast(prev => prev.map(q => {
+            if (q.id === winnerId) {
+                const tr = [...q.trackRecord];
+                tr[tr.length - 1] = 'WIN';
+                return {
+                    ...q,
+                    trackRecord: tr,
+                    confessionals: ["Legendary win! Time to make a power move.", ...q.confessionals].slice(0, 10)
+                };
+            }
+            return q;
+        }));
+
+        if (bottomQueens.length === 0) {
+            setPendingLegacyElimination(null);
+            setCurrentStoryline(`${winner?.name} wins the lip sync but no queens are eligible for elimination.`);
+            setPhase('ELIMINATION');
+            return;
+        }
+
+        setPendingLegacyElimination({ winnerId, options: bottomQueens });
+        setCurrentStoryline(`${winner?.name} must choose a queen to eliminate.`);
         setPhase('ELIMINATION');
         return;
     }
@@ -472,6 +627,24 @@ export default function PokeDragRaceSimulator() {
     }
   };
 
+  const handleLegacyElimination = (queenId: number) => {
+    if (!pendingLegacyElimination) return;
+    const eliminator = cast.find(c => c.id === pendingLegacyElimination.winnerId);
+    const eliminatedQueen = cast.find(c => c.id === queenId);
+
+    setCast(prev => prev.map(q => {
+        if (q.id === queenId) {
+            const tr = [...q.trackRecord];
+            tr[tr.length - 1] = 'ELIM';
+            return { ...q, status: 'eliminated', trackRecord: tr };
+        }
+        return q;
+    }));
+
+    setPendingLegacyElimination(null);
+    setCurrentStoryline(`${eliminatedQueen?.name}, ${eliminator?.name} has chosen for you to sashay away.`);
+  };
+
   const simulateFinale = () => {
       const finalists = activeQueens;
       // Simple score based winner for now
@@ -479,17 +652,11 @@ export default function PokeDragRaceSimulator() {
       let winnerId = finalists[0].id;
 
       finalists.forEach(f => {
-          let score = 0;
-          f.trackRecord.forEach(p => {
-              if (p === 'WIN') score += 10;
-              if (p === 'TOP2') score += 8;
-              if (p === 'HIGH') score += 5;
-              if (p === 'SAFE') score += 2;
-              if (p === 'LOW') score -= 1;
-              if (p === 'BTM2') score -= 4;
-          });
-          // Add a little randomness
-          score += Math.random() * 10;
+          const summary = summarizePlacements(f.trackRecord);
+          let score = summary.ppe * 10;
+          score += summary.wins * 3 + summary.top2 * 2 + summary.highs;
+          score -= summary.bottoms;
+          score += Math.random() * 6; // sprinkle of chaos
           if (score > bestScore) {
               bestScore = score;
               winnerId = f.id;
@@ -585,10 +752,26 @@ export default function PokeDragRaceSimulator() {
                 <h2 className="text-4xl font-extrabold text-pink-900 text-center mb-4">Cast Your Queens</h2>
                 <div className="text-center mb-8 flex flex-col items-center space-y-4">
                     <div className="text-xl text-pink-700 font-bold">{selectedCastIds.length} Queens Selected</div>
-                     <label className="flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow cursor-pointer">
-                        <input type="checkbox" checked={splitPremiere} onChange={e => setSplitPremiere(e.target.checked)} className="w-5 h-5 text-pink-600" />
+                    <div className="flex items-center space-x-3 bg-white p-2 rounded-full shadow-inner">
+                        <button
+                            onClick={() => setCompetitionFormat('standard')}
+                            className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${competitionFormat === 'standard' ? 'bg-pink-600 text-white shadow-md' : 'text-pink-600 hover:bg-pink-100'}`}
+                        >
+                            Main Season
+                        </button>
+                        <button
+                            onClick={() => setCompetitionFormat('allStars')}
+                            className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${competitionFormat === 'allStars' ? 'bg-purple-600 text-white shadow-md' : 'text-purple-600 hover:bg-purple-100'}`}
+                        >
+                            All Stars Legacy
+                        </button>
+                    </div>
+                    <p className="text-xs uppercase tracking-widest text-gray-500">{competitionFormat === 'allStars' ? 'Top two lip sync for their legacy each week.' : 'Bottom two lip sync for their lives.'}</p>
+                     <label className={`flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow cursor-pointer ${competitionFormat === 'allStars' ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                        <input type="checkbox" checked={splitPremiere} disabled={competitionFormat === 'allStars'} onChange={e => setSplitPremiere(e.target.checked)} className="w-5 h-5 text-pink-600" />
                         <span className="font-bold text-pink-800">Split Premiere (2 Non-Elim Episodes)</span>
                     </label>
+                    {competitionFormat === 'allStars' && <div className="text-xs text-red-500 font-semibold">Split Premiere is unavailable in All Stars format.</div>}
                     <button onClick={finalizeCast} disabled={selectedCastIds.length < 4} className="bg-pink-600 text-white px-8 py-3 rounded-full font-bold text-xl disabled:opacity-50 hover:bg-pink-700 transition-colors">
                         Start Season
                     </button>
@@ -704,24 +887,39 @@ export default function PokeDragRaceSimulator() {
                 <div className="bg-gray-800 p-6 rounded-xl text-white mb-6 border-4 border-red-500 shadow-2xl">
                     <h3 className="font-bold text-xl flex items-center text-red-400 mb-4">Producer Override</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto">
-                        {currentEpisodeQueens.map(queen => (
-                            <div key={queen.id} className="flex items-center justify-between bg-gray-700 p-3 rounded-lg">
-                                <div className="flex items-center space-x-3">
-                                    <img src={getQueenImg(queen.dexId)} className="w-10 h-10" />
-                                    <span className="font-bold">{queen.name}</span>
+                        {currentEpisodeQueens.map(queen => {
+                            const summary = summarizePlacements(queen.trackRecord);
+                            return (
+                                <div key={queen.id} className="bg-gray-700 p-4 rounded-lg space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center space-x-3">
+                                            <img src={getQueenImg(queen.dexId)} className="w-10 h-10 rounded-full border border-gray-600" />
+                                            <div>
+                                                <span className="font-bold text-sm">{queen.name}</span>
+                                                <div className="text-[10px] uppercase tracking-widest text-gray-300">PPE {formatPPE(summary.ppe)} • Wins {summary.wins} • Bottoms {summary.bottoms}</div>
+                                            </div>
+                                        </div>
+                                        <select
+                                            className="bg-gray-900 text-white rounded px-2 py-1 text-xs"
+                                            value={unsavedPlacements[queen.id] || 'SAFE'}
+                                            onChange={(e) => setUnsavedPlacements({...unsavedPlacements, [queen.id]: e.target.value as Placement})}
+                                        >
+                                            {(splitPremiere && episodeCount <= 2)
+                                                ? ['WIN', 'TOP2', 'HIGH', 'SAFE', 'LOW'].map(p => <option key={p} value={p}>{p}</option>)
+                                                : ['WIN', 'TOP2', 'HIGH', 'SAFE', 'LOW', 'BTM2'].map(p => <option key={p} value={p}>{p}</option>)
+                                            }
+                                        </select>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs text-gray-300">
+                                        <div className="flex items-center space-x-2">
+                                            <span className="text-[10px] uppercase tracking-widest text-gray-400">Track Record</span>
+                                            <MiniTrackRecord trackRecord={queen.trackRecord} />
+                                        </div>
+                                        <span className="italic text-[11px]">Last placement: {queen.trackRecord[queen.trackRecord.length - 1] || 'N/A'}</span>
+                                    </div>
                                 </div>
-                                <select 
-                                    className="bg-gray-900 text-white rounded px-2 py-1"
-                                    value={unsavedPlacements[queen.id] || 'SAFE'}
-                                    onChange={(e) => setUnsavedPlacements({...unsavedPlacements, [queen.id]: e.target.value as Placement})}
-                                >
-                                    {(splitPremiere && episodeCount <= 2) 
-                                        ? ['WIN', 'TOP2', 'HIGH', 'SAFE', 'LOW'].map(p => <option key={p} value={p}>{p}</option>)
-                                        : ['WIN', 'HIGH', 'SAFE', 'LOW', 'BTM2'].map(p => <option key={p} value={p}>{p}</option>)
-                                    }
-                                </select>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -756,9 +954,15 @@ export default function PokeDragRaceSimulator() {
           <div className="text-center space-y-12 mt-8">
             <div className="animate-pulse">
                 <h2 className="text-5xl font-extrabold text-red-600 tracking-tighter">
-                    {(splitPremiere && episodeCount <= 2) ? "LIP SYNC FOR THE WIN" : "LIP SYNC FOR YOUR LIFE"}
+                    {(splitPremiere && episodeCount <= 2)
+                        ? "LIP SYNC FOR THE WIN"
+                        : competitionFormat === 'allStars'
+                            ? "LIP SYNC FOR YOUR LEGACY"
+                            : "LIP SYNC FOR YOUR LIFE"}
                 </h2>
-                <p className="text-red-400 font-bold text-xl mt-2">DON'T F*CK IT UP</p>
+                <p className="text-red-400 font-bold text-xl mt-2">
+                    {(competitionFormat === 'allStars' && !(splitPremiere && episodeCount <= 2)) ? 'LEGACY IS ON THE LINE' : "DON'T F*CK IT UP"}
+                </p>
             </div>
             
             <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-16">
@@ -775,7 +979,7 @@ export default function PokeDragRaceSimulator() {
                    </div>
                ))}
             </div>
-            {!(splitPremiere && episodeCount <= 2) && (
+            {!(splitPremiere && episodeCount <= 2) && competitionFormat !== 'allStars' && (
                  <button onClick={() => handleLipsyncWinner(0, true)} disabled={doubleShantayUsed} className="bg-pink-100 text-pink-800 px-6 py-3 rounded-full font-bold hover:bg-pink-200 disabled:opacity-50">
                     {doubleShantayUsed ? "Double Shantay Used" : "Double Shantay (Both Stay)"}
                  </button>
@@ -783,7 +987,34 @@ export default function PokeDragRaceSimulator() {
           </div>
         )}
 
-        {phase === 'ELIMINATION' && (
+        {phase === 'ELIMINATION' && pendingLegacyElimination && (
+            <div className="flex flex-col items-center justify-center h-full space-y-8 text-center animate-in fade-in duration-1000">
+                <Megaphone size={120} className="text-purple-400 drop-shadow-lg" />
+                <h2 className="text-4xl font-extrabold text-purple-900">Legacy Decision</h2>
+                <p className="text-lg text-purple-700 max-w-2xl">{cast.find(c => c.id === pendingLegacyElimination.winnerId)?.name} won the lip sync! Choose which bottom queen will sashay away.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {pendingLegacyElimination.options.map(option => {
+                        const summary = summarizePlacements(option.trackRecord);
+                        return (
+                            <button
+                                key={option.id}
+                                onClick={() => handleLegacyElimination(option.id)}
+                                className="bg-white rounded-3xl px-6 py-5 shadow-xl border-4 border-purple-200 hover:border-purple-500 transition-all w-72 flex flex-col items-center space-y-3 group"
+                            >
+                                <img src={getQueenImg(option.dexId)} className="w-24 h-24 bg-purple-50 rounded-full border-2 border-purple-200" />
+                                <h3 className="text-xl font-bold text-purple-800">{option.name}</h3>
+                                <MiniTrackRecord trackRecord={option.trackRecord} />
+                                <div className="text-sm font-semibold text-purple-600">PPE {formatPPE(summary.ppe)}</div>
+                                <div className="text-xs text-gray-500 uppercase tracking-wide">Wins {summary.wins} • Bottoms {summary.bottoms}</div>
+                                <span className="text-xs font-bold text-white bg-purple-500 px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">Select to Eliminate</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+        )}
+
+        {phase === 'ELIMINATION' && !pendingLegacyElimination && (
             <div className="flex flex-col items-center justify-center h-full space-y-8 text-center animate-in fade-in duration-1000">
                 {(splitPremiere && episodeCount <= 2) ? <Trophy size={120} className="text-yellow-400" /> : <HeartCrack size={120} className="text-gray-300" />}
                 <h2 className="text-4xl font-bold text-gray-800 max-w-2xl leading-tight">{currentStoryline}</h2>
@@ -827,7 +1058,11 @@ export default function PokeDragRaceSimulator() {
         <div className="bg-white/90 backdrop-blur-md p-4 border-t-4 border-pink-500 flex justify-between items-center shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.1)] sticky bottom-0 z-20">
           <div className="text-pink-900 italic font-semibold truncate max-w-xl px-4 border-l-4 border-pink-300">{currentStoryline}</div>
           {['PROMO','ENTRANCES','CHALLENGE_SELECTION','CHALLENGE_INTRO','PERFORMANCE','JUDGING','UNTUCKED','ELIMINATION'].includes(phase) && (
-             <button onClick={nextPhase} className="bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-10 rounded-full text-lg flex items-center active:scale-95 transition-transform">
+             <button
+               onClick={nextPhase}
+               disabled={phase === 'ELIMINATION' && !!pendingLegacyElimination}
+               className={`bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-10 rounded-full text-lg flex items-center transition-transform ${phase === 'ELIMINATION' && pendingLegacyElimination ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'}`}
+             >
                PROCEED <Sparkles size={20} className="ml-2"/>
              </button>
           )}
@@ -847,34 +1082,101 @@ export default function PokeDragRaceSimulator() {
         return b.trackRecord.length - a.trackRecord.length;
     });
 
+    const maxEpisodes = Math.max(
+        episodeCount - (phase === 'SEASON_OVER' ? 0 : 1),
+        cast.reduce((max, q) => Math.max(max, q.trackRecord.length), 0)
+    );
+
+    const queenSummaries = sortedCast.map(queen => ({ queen, summary: summarizePlacements(queen.trackRecord) }));
+
+    const topWins = queenSummaries.slice().sort((a, b) => (b.summary.wins - a.summary.wins) || (b.summary.ppe - a.summary.ppe))[0];
+    const topPPE = queenSummaries.slice().sort((a, b) => b.summary.ppe - a.summary.ppe)[0];
+    const lipSyncHero = queenSummaries.slice().sort((a, b) => b.summary.bottoms - a.summary.bottoms)[0];
+
     return (
-      <div className="p-8 bg-pink-50 h-full overflow-auto">
-        <h2 className="text-4xl font-extrabold text-pink-900 mb-8 flex items-center"><BarChart3 className="mr-4" size={36} /> Season Track Record</h2>
+      <div className="p-8 bg-pink-50 h-full overflow-auto space-y-6">
+        <h2 className="text-4xl font-extrabold text-pink-900 mb-4 flex items-center"><BarChart3 className="mr-4" size={36} /> Season Track Record</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <SeasonHighlightCard
+                title="Most Challenge Wins"
+                accent="bg-gradient-to-r from-pink-500 to-rose-500"
+                queen={topWins?.queen}
+                value={topWins ? `${topWins.summary.wins} win${topWins.summary.wins === 1 ? '' : 's'}` : '—'}
+                subtext={topWins ? `PPE ${formatPPE(topWins.summary.ppe)}` : 'Pending results'}
+            />
+            <SeasonHighlightCard
+                title="Best PPE"
+                accent="bg-gradient-to-r from-purple-500 to-indigo-500"
+                queen={topPPE?.queen}
+                value={topPPE ? formatPPE(topPPE.summary.ppe) : '0.00'}
+                subtext={topPPE ? `${topPPE.summary.wins} wins • ${topPPE.summary.highs} highs` : 'Keep watching!'}
+            />
+            <SeasonHighlightCard
+                title="Lip Sync Assassin"
+                accent="bg-gradient-to-r from-amber-500 to-orange-500"
+                queen={lipSyncHero?.queen}
+                value={lipSyncHero ? `${lipSyncHero.summary.bottoms} lip sync${lipSyncHero.summary.bottoms === 1 ? '' : 's'}` : '0'}
+                subtext={lipSyncHero ? `SAFE ${lipSyncHero.summary.safes} • LOW ${lipSyncHero.summary.lows}` : 'No data yet'}
+            />
+        </div>
+
         <div className="overflow-x-auto bg-white rounded-3xl shadow-xl border border-pink-100">
           <table className="min-w-full text-sm">
-            <thead className="bg-pink-600 text-white uppercase tracking-wider">
+            <thead className="bg-gradient-to-r from-pink-600 to-purple-600 text-white uppercase tracking-widest">
               <tr>
                 <th className="p-4 text-left">Queen</th>
-                {Array.from({ length: Math.max(episodeCount - (phase === 'SEASON_OVER' ? 0 : 1), cast.reduce((max, q) => Math.max(max, q.trackRecord.length), 0)) }).map((_, i) => (
+                {Array.from({ length: maxEpisodes }).map((_, i) => (
                   <th key={i} className="p-4 text-center">Ep {i + 1}</th>
-                ))} 
+                ))}
+                <th className="p-4 text-center">PPE</th>
+                <th className="p-4 text-center">Wins</th>
+                <th className="p-4 text-center">High</th>
+                <th className="p-4 text-center">Low</th>
+                <th className="p-4 text-center">Bottom</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-pink-50">
-              {sortedCast.map((queen) => (
-                <tr key={queen.id} className="hover:bg-pink-50 transition-colors">
-                  <td className="p-3 flex items-center space-x-3 font-bold text-pink-900">
-                    <img src={getQueenImg(queen.dexId)} className="w-10 h-10 bg-gray-100 rounded-full" />
-                    <span className="text-base">{queen.name}</span>
-                    {queen.status === 'winner' && <Crown size={20} className="text-yellow-500 ml-2" />}
-                  </td>
-                  {queen.trackRecord.map((placement, i) => (
-                    <td key={i} className="p-3 text-center">
-                      <div className="flex justify-center"><PlacementBadge placement={placement} /></div>
+            <tbody className="divide-y divide-pink-100">
+              {queenSummaries.map(({ queen, summary }, idx) => {
+                const rowAccent = queen.status === 'winner'
+                    ? 'bg-yellow-50'
+                    : queen.status === 'runner-up'
+                        ? 'bg-purple-50'
+                        : idx % 2 === 0
+                            ? 'bg-white'
+                            : 'bg-pink-50/40';
+                return (
+                  <tr key={queen.id} className={`${rowAccent} transition-colors hover:bg-pink-100/70`}>
+                    <td className="p-4">
+                      <div className="flex items-center space-x-3">
+                        <img src={getQueenImg(queen.dexId)} className="w-12 h-12 bg-gray-100 rounded-full border-2 border-pink-200" />
+                        <div>
+                          <div className="font-bold text-pink-900 flex items-center space-x-2">
+                            <span>{queen.name}</span>
+                            {queen.status === 'winner' && <Crown size={18} className="text-yellow-500" />}
+                          </div>
+                          <div className="text-xs uppercase tracking-widest text-pink-500">PPE {formatPPE(summary.ppe)}</div>
+                        </div>
+                      </div>
                     </td>
-                  ))}
-                </tr>
-              ))}
+                    {Array.from({ length: maxEpisodes }).map((_, episodeIndex) => {
+                        const placement = queen.trackRecord[episodeIndex] ?? '';
+                        return (
+                            <td key={episodeIndex} className="p-2 text-center">
+                                {placement
+                                    ? <div className="flex justify-center"><PlacementBadge placement={placement as Placement} /></div>
+                                    : <span className="text-gray-300">—</span>}
+                            </td>
+                        );
+                    })}
+                    <td className="p-3 text-center font-semibold text-pink-700">{formatPPE(summary.ppe)}</td>
+                    <td className="p-3 text-center">{summary.wins}</td>
+                    <td className="p-3 text-center">{summary.highs + summary.top2}</td>
+                    <td className="p-3 text-center">{summary.lows}</td>
+                    <td className="p-3 text-center">{summary.bottoms}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -882,26 +1184,127 @@ export default function PokeDragRaceSimulator() {
     );
   };
 
-  const StatsTab = () => (
-      <div className="p-8 bg-pink-50 h-full overflow-auto space-y-8">
-          <h2 className="text-4xl font-extrabold text-pink-900 flex items-center mb-8"><VideoIcon className="mr-4" size={36}/> Season Insights & Tea</h2>
-          <div className="bg-white p-8 rounded-3xl shadow-xl border border-pink-100">
-              <h3 className="text-2xl font-bold text-pink-800 mb-6 flex items-center"><MessageSquare className="mr-3"/> Confessionals Cam</h3>
-              <div className="space-y-6 max-h-[600px] overflow-y-auto pr-4 custom-scrollbar">
-                  {cast.filter(c => c.confessionals.length > 0).flatMap(c => c.confessionals.map((conf, i) => ({ queen: c, text: conf, id: `${c.id}-${i}`, idx: i })))
-                    .sort((a,b) => b.idx - a.idx).slice(0, 30).map((item) => (
-                      <div key={item.id} className="flex items-start space-x-4 bg-pink-50 p-5 rounded-2xl border border-pink-100 shadow-sm">
-                          <img src={getQueenImg(item.queen.dexId)} className="w-14 h-14 bg-white rounded-full border-2 border-pink-200 flex-shrink-0" />
-                          <div>
-                              <span className="font-bold text-pink-900 text-lg">{item.queen.name}</span>
-                              <div className="text-gray-700 italic mt-1 text-lg leading-relaxed">"{item.text}"</div>
-                          </div>
-                      </div>
-                  ))}
+  const StatsTab = () => {
+      const queenSummaries = useMemo(() => cast.map(queen => ({ queen, summary: summarizePlacements(queen.trackRecord) })), [cast]);
+      const leaderboard = queenSummaries.filter(({ summary }) => summary.competitiveEpisodes > 0).sort((a, b) => b.summary.ppe - a.summary.ppe).slice(0, 5);
+      const chartData = queenSummaries.filter(({ summary }) => summary.competitiveEpisodes > 0).map(({ queen, summary }) => ({
+          name: queen.name.split(' ')[0],
+          fullName: queen.name,
+          ppe: parseFloat(formatPPE(summary.ppe)),
+          wins: summary.wins
+      }));
+      const eliminationOrder = cast.filter(q => q.status === 'eliminated').sort((a, b) => a.trackRecord.length - b.trackRecord.length);
+
+      const chartPalette = ['#f472b6', '#c084fc', '#60a5fa', '#fb7185', '#facc15', '#34d399', '#fbbf24'];
+
+      return (
+        <div className="p-8 bg-pink-50 h-full overflow-auto space-y-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <h2 className="text-4xl font-extrabold text-pink-900 flex items-center"><VideoIcon className="mr-4" size={36}/> Season Insights & Tea</h2>
+              <div className="bg-white px-4 py-2 rounded-full shadow text-sm font-semibold text-pink-700 border border-pink-100 flex items-center space-x-2">
+                  <Sparkles size={16} className="text-yellow-400" />
+                  <span>{competitionFormat === 'allStars' ? 'All Stars: Top Two Lip Sync for Your Legacy' : 'Main Season: Bottom Two Lip Sync for Their Lives'}</span>
               </div>
           </div>
-      </div>
-  );
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-3xl shadow-xl border border-pink-100">
+                  <h3 className="text-2xl font-bold text-pink-800 mb-4 flex items-center"><Trophy className="mr-3"/> Performance Leaderboard</h3>
+                  <div className="space-y-4 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar">
+                      {leaderboard.length === 0 && <div className="text-sm text-gray-500">No episodes have been judged yet.</div>}
+                      {leaderboard.map(({ queen, summary }, index) => (
+                          <div key={queen.id} className="bg-pink-50/80 border border-pink-100 rounded-2xl p-4 flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                  <span className="text-lg font-bold text-pink-500">#{index + 1}</span>
+                                  <img src={getQueenImg(queen.dexId)} className="w-12 h-12 rounded-full border-2 border-pink-200" />
+                                  <div>
+                                      <div className="font-bold text-pink-900">{queen.name}</div>
+                                      <div className="text-xs uppercase tracking-widest text-pink-500">PPE {formatPPE(summary.ppe)} • Wins {summary.wins}</div>
+                                      <MiniTrackRecord trackRecord={queen.trackRecord} />
+                                  </div>
+                              </div>
+                              <div className="text-right text-xs text-gray-500">
+                                  <div>Highs {summary.highs + summary.top2}</div>
+                                  <div>Lows {summary.lows}</div>
+                              </div>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-3xl shadow-xl border border-pink-100">
+                  <h3 className="text-2xl font-bold text-pink-800 mb-4 flex items-center"><BarChart3 className="mr-3"/> PPE Analytics</h3>
+                  <div className="h-72">
+                      {chartData.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                                  <XAxis dataKey="name" stroke="#f472b6" tick={{ fontSize: 12 }} />
+                                  <YAxis domain={[0, 5]} stroke="#f472b6" tick={{ fontSize: 12 }} />
+                                  <Tooltip
+                                      cursor={{ fill: '#fce7f3' }}
+                                      formatter={(value: number, name: string, entry: any) => [`${value.toFixed(2)} PPE`, entry?.payload?.fullName || name]}
+                                  />
+                                  <Bar dataKey="ppe" radius={[8, 8, 0, 0]}>
+                                      {chartData.map((entry, index) => (
+                                          <Cell key={`cell-${entry.name}`} fill={chartPalette[index % chartPalette.length]} />
+                                      ))}
+                                  </Bar>
+                              </BarChart>
+                          </ResponsiveContainer>
+                      ) : (
+                          <div className="h-full flex items-center justify-center text-gray-400 text-sm">Complete at least one episode to view PPE analytics.</div>
+                      )}
+                  </div>
+              </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-3xl shadow-xl border border-pink-100">
+                  <h3 className="text-2xl font-bold text-pink-800 mb-4 flex items-center"><XCircle className="mr-3"/> Elimination Order</h3>
+                  {eliminationOrder.length === 0 ? (
+                      <div className="text-sm text-gray-500">No queens have been eliminated yet.</div>
+                  ) : (
+                      <div className="space-y-3">
+                          {eliminationOrder.map((queen, index) => {
+                              const summary = summarizePlacements(queen.trackRecord);
+                              return (
+                                  <div key={queen.id} className="flex items-center justify-between bg-pink-50 rounded-2xl px-4 py-3 border border-pink-100">
+                                      <div className="flex items-center space-x-3">
+                                          <span className="text-xs font-bold text-pink-500 uppercase">#{index + 1}</span>
+                                          <img src={getQueenImg(queen.dexId)} className="w-10 h-10 rounded-full border border-pink-200" />
+                                          <div>
+                                              <div className="font-bold text-pink-900 text-sm">{queen.name}</div>
+                                              <div className="text-xs text-gray-500">Last placement: {queen.trackRecord[queen.trackRecord.length - 1]}</div>
+                                          </div>
+                                      </div>
+                                      <div className="text-xs uppercase tracking-widest text-pink-500">PPE {formatPPE(summary.ppe)}</div>
+                                  </div>
+                              );
+                          })}
+                      </div>
+                  )}
+              </div>
+
+              <div className="bg-white p-6 rounded-3xl shadow-xl border border-pink-100">
+                  <h3 className="text-2xl font-bold text-pink-800 mb-4 flex items-center"><MessageSquare className="mr-3"/> Confessionals Cam</h3>
+                  <div className="space-y-6 max-h-[360px] overflow-y-auto pr-4 custom-scrollbar">
+                      {cast.filter(c => c.confessionals.length > 0).flatMap(c => c.confessionals.map((conf, i) => ({ queen: c, text: conf, id: `${c.id}-${i}`, idx: i })))
+                        .sort((a,b) => b.idx - a.idx).slice(0, 20).map((item) => (
+                          <div key={item.id} className="flex items-start space-x-4 bg-pink-50 p-4 rounded-2xl border border-pink-100 shadow-sm">
+                              <img src={getQueenImg(item.queen.dexId)} className="w-12 h-12 bg-white rounded-full border-2 border-pink-200 flex-shrink-0" />
+                              <div>
+                                  <span className="font-bold text-pink-900 text-sm">{item.queen.name}</span>
+                                  <div className="text-gray-700 italic mt-1 text-sm leading-relaxed">"{item.text}"</div>
+                              </div>
+                          </div>
+                      ))}
+                      {cast.every(c => c.confessionals.length === 0) && <div className="text-sm text-gray-500">No confessionals recorded yet.</div>}
+                  </div>
+              </div>
+          </div>
+        </div>
+      );
+  };
 
   return (
     <div className="flex h-screen bg-gray-100 font-sans overflow-hidden text-gray-800">
@@ -923,6 +1326,25 @@ export default function PokeDragRaceSimulator() {
     </div>
   );
 }
+
+const SeasonHighlightCard = ({ title, accent, queen, value, subtext }: { title: string; accent: string; queen?: Queen; value: string; subtext: string }) => (
+    <div className="bg-white rounded-3xl shadow-lg border border-pink-100 overflow-hidden">
+        <div className={`h-1 w-full ${accent}`}></div>
+        <div className="p-5 flex items-center space-x-4">
+            {queen ? (
+                <img src={getQueenImg(queen.dexId)} className="w-14 h-14 bg-pink-50 rounded-full border-2 border-pink-200" />
+            ) : (
+                <div className="w-14 h-14 bg-pink-100 rounded-full flex items-center justify-center text-pink-400 font-bold">?</div>
+            )}
+            <div className="text-left">
+                <p className="text-[11px] uppercase tracking-widest text-gray-400">{title}</p>
+                <div className="text-lg font-bold text-pink-900">{queen ? queen.name : 'TBD'}</div>
+                <div className="text-sm font-semibold text-pink-600">{value}</div>
+                <div className="text-xs text-gray-500">{subtext}</div>
+            </div>
+        </div>
+    </div>
+);
 
 const NavButton = ({ icon, label, active, onClick, disabled }: any) => (
     <button onClick={onClick} disabled={disabled} className={`w-full flex items-center p-4 rounded-xl transition-all duration-200 ${active ? 'bg-pink-600 text-white shadow-lg font-bold' : 'hover:bg-white/10 text-pink-200'} ${disabled ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'}`}>

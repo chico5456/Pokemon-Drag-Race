@@ -10,7 +10,21 @@ import {
 type StatCategory = 'acting' | 'improv' | 'comedy' | 'dance' | 'design' | 'singing' | 'rusical' | 'rumix' | 'makeover' | 'lipsync';
 type Stats = Record<StatCategory, number>;
 
-type Placement = 'WIN' | 'WIN+OUT' | 'TOP2' | 'HIGH' | 'SAFE' | 'LOW' | 'BTM2' | 'ELIM' | 'RUNNER-UP' | 'WINNER' | 'N/A' | '';
+type Placement =
+  | 'WIN'
+  | 'WIN+RTRN'
+  | 'WIN+OUT'
+  | 'TOP2'
+  | 'HIGH'
+  | 'SAFE'
+  | 'LOW'
+  | 'BTM2'
+  | 'OUT'
+  | 'ELIM'
+  | 'RUNNER-UP'
+  | 'WINNER'
+  | 'N/A'
+  | '';
 
 type QueenForm = {
   name: string;
@@ -1009,12 +1023,14 @@ const getConfessional = (queen: Queen, placement: Placement, phase: Phase, chall
 
 const PLACEMENT_POINTS: Record<Placement, number> = {
     WIN: 5,
+    'WIN+RTRN': 5,
     'WIN+OUT': 5,
     TOP2: 4.5,
     HIGH: 4,
     SAFE: 3,
     LOW: 2,
     BTM2: 1,
+    OUT: 0,
     ELIM: 0,
     'RUNNER-UP': 0,
     'WINNER': 0,
@@ -1066,7 +1082,7 @@ const PPEBarChart: React.FC<{ data: PPEChartEntry[]; palette: string[] }> = ({ d
     );
 };
 
-const COMPETITIVE_PLACEMENTS: Placement[] = ['WIN', 'WIN+OUT', 'TOP2', 'HIGH', 'SAFE', 'LOW', 'BTM2', 'ELIM'];
+const COMPETITIVE_PLACEMENTS: Placement[] = ['WIN', 'WIN+RTRN', 'WIN+OUT', 'TOP2', 'HIGH', 'SAFE', 'LOW', 'BTM2', 'OUT', 'ELIM'];
 
 const calculatePPE = (trackRecord: Placement[]): number => {
     const { totalScore, competitiveEpisodes } = trackRecord.reduce(
@@ -1105,6 +1121,10 @@ const summarizePlacements = (trackRecord: Placement[]) => {
                 summary.wins += 1;
                 summary.competitiveEpisodes += 1;
                 break;
+            case 'WIN+RTRN':
+                summary.wins += 1;
+                summary.competitiveEpisodes += 1;
+                break;
             case 'WIN+OUT':
                 summary.wins += 1;
                 summary.elims += 1;
@@ -1128,6 +1148,10 @@ const summarizePlacements = (trackRecord: Placement[]) => {
                 break;
             case 'BTM2':
                 summary.bottoms += 1;
+                summary.competitiveEpisodes += 1;
+                break;
+            case 'OUT':
+                summary.elims += 1;
                 summary.competitiveEpisodes += 1;
                 break;
             case 'ELIM':
@@ -1443,7 +1467,7 @@ export default function PokeDragRaceSimulator() {
         setRevengeBottomIds(bottomActiveIds);
 
         pairDetails.forEach(entry => {
-            placements[entry.returnee.id] = 'SAFE';
+            placements[entry.returnee.id] = 'OUT';
             placements[entry.partner.id] = 'SAFE';
         });
 
@@ -1453,17 +1477,17 @@ export default function PokeDragRaceSimulator() {
         });
 
         if (safePair) {
-            placements[safePair.returnee.id] = 'SAFE';
             placements[safePair.partner.id] = 'SAFE';
         }
 
         bottomPairs.forEach(entry => {
-            placements[entry.returnee.id] = 'BTM2';
             placements[entry.partner.id] = 'BTM2';
         });
 
         currentEpisodeQueens.forEach(q => {
-            if (!placements[q.id]) {
+            if (revengeReturneeIds.includes(q.id)) {
+                placements[q.id] = placements[q.id] || 'OUT';
+            } else if (!placements[q.id]) {
                 placements[q.id] = 'SAFE';
             }
         });
@@ -1565,11 +1589,21 @@ export default function PokeDragRaceSimulator() {
 
       placements[q.id] = placement;
 
-      const confessionalPlacement: Placement = placement === 'WIN+OUT' ? 'WIN' : placement;
+      const confessionalPlacement: Placement =
+          placement === 'WIN+OUT' || placement === 'WIN+RTRN'
+              ? 'WIN'
+              : placement === 'OUT'
+                  ? 'ELIM'
+                  : placement;
+      const paddedRecord = [...q.trackRecord];
+      while (paddedRecord.length < episodeCount - 1) {
+          paddedRecord.push('N/A');
+      }
+      const updatedRecord = [...paddedRecord, placement];
       const newConfessional = getConfessional(q, confessionalPlacement, 'JUDGING', currentChallenge?.type, currentEpisodeQueens);
       return {
         ...q,
-        trackRecord: [...q.trackRecord, placement],
+        trackRecord: updatedRecord,
         confessionals: [newConfessional, ...q.confessionals].slice(0, 10)
       };
     }));
@@ -1580,9 +1614,9 @@ export default function PokeDragRaceSimulator() {
 
   const generateUntuckedDrama = () => {
     const isSplitNonElim = splitPremiere && episodeCount <= 2;
-    const safeQueens = currentEpisodeQueens.filter(q => ['SAFE', 'HIGH', 'WIN', 'WIN+OUT'].includes(unsavedPlacements[q.id]));
+    const safeQueens = currentEpisodeQueens.filter(q => ['SAFE', 'HIGH', 'WIN', 'WIN+RTRN', 'WIN+OUT'].includes(unsavedPlacements[q.id]));
     const bottomQueens = currentEpisodeQueens.filter(q => ['LOW', 'BTM2'].includes(unsavedPlacements[q.id]));
-    const top2Queens = currentEpisodeQueens.filter(q => ['TOP2', 'WIN', 'WIN+OUT'].includes(unsavedPlacements[q.id]));
+    const top2Queens = currentEpisodeQueens.filter(q => ['TOP2', 'WIN', 'WIN+RTRN', 'WIN+OUT'].includes(unsavedPlacements[q.id]));
 
     if (isSplitNonElim && top2Queens.length >= 2) {
         setCurrentStoryline(`Untucked: ${top2Queens[0].name} and ${top2Queens[1].name} are sizing each other up for the lip sync win.`);
@@ -1705,11 +1739,14 @@ export default function PokeDragRaceSimulator() {
         const partnerIds = revengePairings
             .filter(pair => winningReturneeIds.includes(pair.returneeId))
             .map(pair => pair.partnerId);
+        const nonReturningIds = revengeReturneeIds.filter(id =>
+            !winningReturneeIds.includes(id) && !losingReturneeIds.includes(id)
+        );
 
         setCast(prev => prev.map(q => {
             if (winningReturneeIds.includes(q.id)) {
                 const tr = [...q.trackRecord];
-                tr[tr.length - 1] = 'WIN';
+                tr[tr.length - 1] = 'WIN+RTRN';
                 return {
                     ...q,
                     status: 'active',
@@ -1745,14 +1782,28 @@ export default function PokeDragRaceSimulator() {
                     ].slice(0, 10)
                 };
             }
+            if (nonReturningIds.includes(q.id)) {
+                const tr = [...q.trackRecord];
+                tr[tr.length - 1] = 'OUT';
+                return {
+                    ...q,
+                    status: 'eliminated',
+                    trackRecord: tr,
+                    confessionals: [
+                        "I gave it my all, but the comeback wasn't in the cards.",
+                        ...q.confessionals
+                    ].slice(0, 10)
+                };
+            }
             return q;
         }));
 
         setLatestResults(prev => {
             const updated = { ...prev };
-            winningReturneeIds.forEach(id => { updated[id] = 'WIN'; });
+            winningReturneeIds.forEach(id => { updated[id] = 'WIN+RTRN'; });
             partnerIds.forEach(id => { updated[id] = 'WIN'; });
             losingReturneeIds.forEach(id => { updated[id] = 'WIN+OUT'; });
+            nonReturningIds.forEach(id => { updated[id] = 'OUT'; });
             return updated;
         });
 
@@ -1924,11 +1975,13 @@ export default function PokeDragRaceSimulator() {
           {trackRecord.map((placement, idx) => {
              const style = {
                  'WIN': { backgroundColor: 'royalblue' },
+                 'WIN+RTRN': { backgroundColor: '#4f46e5' },
                  'WIN+OUT': { backgroundColor: 'mediumslateblue' },
                  'TOP2': { backgroundColor: 'deepskyblue' },
                  'HIGH': { backgroundColor: 'lightblue' },
                  'LOW': { backgroundColor: 'lightpink' },
                  'BTM2': { backgroundColor: 'tomato' },
+                 'OUT': { backgroundColor: '#6b7280' },
                  'ELIM': { backgroundColor: 'darkred' },
                  'N/A': { backgroundColor: '#e5e7eb', opacity: 0.3 }
              }[placement] || { backgroundColor: '#e5e7eb' }; // SAFE is gray
@@ -1943,12 +1996,14 @@ export default function PokeDragRaceSimulator() {
   const PlacementBadge = ({ placement }: { placement: Placement }) => {
     const styleColors: Record<string, React.CSSProperties> = {
       'WIN': { backgroundColor: 'royalblue', borderColor: 'darkblue', color: 'white' },
+      'WIN+RTRN': { backgroundColor: '#4f46e5', borderColor: '#312e81', color: 'white', fontWeight: 'bold' },
       'WIN+OUT': { backgroundColor: 'mediumslateblue', borderColor: 'rebeccapurple', color: 'white', fontWeight: 'bold' },
       'TOP2': { backgroundColor: 'deepskyblue', borderColor: 'dodgerblue', color: 'white', fontWeight: 'bold' },
       'HIGH': { backgroundColor: 'lightblue', borderColor: 'deepskyblue', color: 'darkblue' },
       'LOW': { backgroundColor: 'lightpink', borderColor: 'pink', color: 'darkred' },
       'BTM2': { backgroundColor: 'tomato', borderColor: 'orangered', color: 'white' },
       'SAFE': { backgroundColor: '#e5e7eb', borderColor: '#9ca3af', color: '#374151' },
+      'OUT': { backgroundColor: '#6b7280', borderColor: '#4b5563', color: '#f9fafb', fontWeight: 'bold' },
       'ELIM': { backgroundColor: '#374151', borderColor: '#1f2937', color: '#f87171', fontWeight: 'bold' },
       'RUNNER-UP': { backgroundColor: '#c0c0c0', borderColor: '#6b7280', color: '#111827' },
       'WINNER': { backgroundColor: 'gold', borderColor: 'darkgoldenrod', color: 'white', fontWeight: '800' },
@@ -2136,7 +2191,7 @@ export default function PokeDragRaceSimulator() {
             {revengeEpisodeActive ? (
                 <div className="space-y-8">
                     <div className="text-center">
-                        <h2 className="text-4xl font-extrabold text-purple-900 tracking-tight flex items-center justify-center"><Sparkles className="mr-3 text-purple-400" /> Episode 5 • Revenge of the Queens</h2>
+                        <h2 className="text-4xl font-extrabold text-purple-900 tracking-tight flex items-center justify-center"><Sparkles className="mr-3 text-purple-400" /> Episode {episodeCount} • Revenge of the Queens</h2>
                         <p className="text-lg text-purple-600 mt-3 max-w-3xl mx-auto">The eliminated legends are back and teaming up with the remaining queens for a stand-up smackdown. Whoever shines on stage can reclaim their spot in the race.</p>
                     </div>
                     <div className="bg-white rounded-3xl border border-purple-200 shadow-xl p-6 space-y-6">
@@ -2297,8 +2352,7 @@ export default function PokeDragRaceSimulator() {
                                         >
                                             {(splitPremiere && episodeCount <= 2)
                                                 ? ['WIN', 'TOP2', 'HIGH', 'SAFE', 'LOW'].map(p => <option key={p} value={p}>{p}</option>)
-                                                : ['WIN', 'WIN+OUT', 'TOP2', 'HIGH', 'SAFE', 'LOW', 'BTM2'].map(p => <option key={p} value={p}>{p}</option>)
-                                            }
+                                                : ['WIN', 'WIN+RTRN', 'WIN+OUT', 'TOP2', 'HIGH', 'SAFE', 'LOW', 'BTM2', 'OUT'].map(p => <option key={p} value={p}>{p}</option>)}
                                         </select>
                                     </div>
                                     <div className="flex items-center justify-between text-xs text-gray-300">
@@ -2349,8 +2403,8 @@ export default function PokeDragRaceSimulator() {
 
             <div className="grid gap-3">
               {currentEpisodeQueens.sort((a,b) => {
-                  const order = { 'WIN': 0, 'WIN+OUT': 1, 'TOP2': 2, 'HIGH': 3, 'SAFE': 4, 'LOW': 5, 'BTM2': 6 } as Record<Placement, number>;
-                  return (order[unsavedPlacements[a.id] as keyof typeof order] || 3) - (order[unsavedPlacements[b.id] as keyof typeof order] || 3);
+                  const order = { 'WIN': 0, 'WIN+RTRN': 1, 'WIN+OUT': 2, 'TOP2': 3, 'HIGH': 4, 'SAFE': 5, 'LOW': 6, 'BTM2': 7, 'OUT': 8 } as Record<Placement, number>;
+                  return (order[unsavedPlacements[a.id] as keyof typeof order] || 4) - (order[unsavedPlacements[b.id] as keyof typeof order] || 4);
               }).map(queen => (
                 <div key={queen.id} className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border-l-4 border-pink-300">
                    <QueenCard queen={queen} />
@@ -2372,26 +2426,28 @@ export default function PokeDragRaceSimulator() {
                 .sort((a, b) => {
                     const order: Record<Placement, number> = {
                         WIN: 0,
-                        'WIN+OUT': 1,
-                        TOP2: 2,
-                        HIGH: 3,
-                        SAFE: 4,
-                        LOW: 5,
-                        BTM2: 6,
-                        ELIM: 7,
-                        'RUNNER-UP': 8,
-                        'WINNER': 9,
-                        'N/A': 10,
-                        '': 11
+                        'WIN+RTRN': 1,
+                        'WIN+OUT': 2,
+                        TOP2: 3,
+                        HIGH: 4,
+                        SAFE: 5,
+                        LOW: 6,
+                        BTM2: 7,
+                        OUT: 8,
+                        ELIM: 9,
+                        'RUNNER-UP': 10,
+                        'WINNER': 11,
+                        'N/A': 12,
+                        '': 13
                     };
                     return order[a.placement] - order[b.placement];
                 });
 
-            const winners = entries.filter(e => ['WIN', 'WIN+OUT'].includes(e.placement));
+            const winners = entries.filter(e => ['WIN', 'WIN+RTRN', 'WIN+OUT'].includes(e.placement));
             const topTwo = entries.filter(e => e.placement === 'TOP2');
             const highs = entries.filter(e => e.placement === 'HIGH');
             const safes = entries.filter(e => e.placement === 'SAFE');
-            const dangers = entries.filter(e => ['LOW', 'BTM2', 'ELIM'].includes(e.placement));
+            const dangers = entries.filter(e => ['LOW', 'BTM2', 'OUT', 'ELIM'].includes(e.placement));
 
             const headline = winners.length
                 ? `Condragulations ${winners.map(w => w.queen.name).join(' & ')}!`
@@ -2438,7 +2494,7 @@ export default function PokeDragRaceSimulator() {
                                         <img src={getQueenImg(queen.dexId)} className="w-14 h-14 rounded-full border-2 border-purple-400 bg-white" />
                                         <div>
                                             <div className="font-bold text-lg text-purple-900">{queen.name}</div>
-                                            <div className="text-xs uppercase tracking-widest text-purple-600">Lip syncs survived {queen.trackRecord.filter(p => p === 'BTM2' || p === 'ELIM').length}</div>
+                                            <div className="text-xs uppercase tracking-widest text-purple-600">Lip syncs survived {queen.trackRecord.filter(p => p === 'BTM2' || p === 'ELIM' || p === 'OUT').length}</div>
                                         </div>
                                     </div>
                                 ))}
@@ -2452,7 +2508,7 @@ export default function PokeDragRaceSimulator() {
                                         <img src={getQueenImg(queen.dexId)} className="w-14 h-14 rounded-full border-2 border-pink-400 bg-white" />
                                         <div>
                                             <div className="font-bold text-lg text-pink-900">{queen.name}</div>
-                                            <div className="text-xs uppercase tracking-widest text-pink-600">Wins {queen.trackRecord.filter(p => p === 'WIN' || p === 'WIN+OUT').length}</div>
+                                            <div className="text-xs uppercase tracking-widest text-pink-600">Wins {queen.trackRecord.filter(p => p === 'WIN' || p === 'WIN+RTRN' || p === 'WIN+OUT').length}</div>
                                         </div>
                                     </div>
                                 ))}
@@ -2508,7 +2564,7 @@ export default function PokeDragRaceSimulator() {
                                                 <div className="text-[11px] uppercase tracking-widest text-rose-500">{placement === 'ELIM' ? 'Eliminated' : placement === 'BTM2' ? 'Lip Sync Survivor?' : 'Critiqued'}</div>
                                             </div>
                                         </div>
-                                        <div className="mt-3 text-xs text-rose-600">Bottoms this season: {queen.trackRecord.filter(p => p === 'BTM2' || p === 'ELIM').length}</div>
+                                        <div className="mt-3 text-xs text-rose-600">Bottoms this season: {queen.trackRecord.filter(p => p === 'BTM2' || p === 'ELIM' || p === 'OUT').length}</div>
                                     </div>
                                 ))}
                             </div>

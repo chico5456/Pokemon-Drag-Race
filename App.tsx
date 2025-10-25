@@ -12,6 +12,14 @@ type Stats = Record<StatCategory, number>;
 
 type Placement = 'WIN' | 'TOP2' | 'HIGH' | 'SAFE' | 'LOW' | 'BTM2' | 'ELIM' | 'RUNNER-UP' | 'WINNER' | 'N/A' | '';
 
+type EvolutionData = {
+  name: string;
+  dexId: number;
+  stats: Stats;
+  personality?: string;
+  entranceLine?: string;
+};
+
 interface Queen {
   id: number;
   dexId: number;
@@ -24,6 +32,8 @@ interface Queen {
   status: 'active' | 'eliminated' | 'winner' | 'runner-up';
   confessionals: string[];
   group?: 1 | 2; // For split premiere
+  evolution?: EvolutionData;
+  hasEvolved?: boolean;
 }
 
 const QUEEN_POOL: Omit<Queen, 'trackRecord' | 'status' | 'confessionals'>[] = [
@@ -58,9 +68,15 @@ const QUEEN_POOL: Omit<Queen, 'trackRecord' | 'status' | 'confessionals'>[] = [
   { id: 28, dexId: 308, name: "Medicham Michaels", originalName: 'Medicham', personality: "Zen Assassin", entranceLine: "Namaste? Nah, I'm here to slay.", stats: { acting: 6, improv: 7, comedy: 5, dance: 10, design: 6, singing: 5, rusical: 8, rumix: 9, makeover: 6, lipsync: 9 } },
   { id: 29, dexId: 350, name: "Feebas Fabulosa", originalName: 'Feebas', personality: "Glow-Up Queen", entranceLine: "From drab to FAB, watch the evolution.", stats: { acting: 5, improv: 6, comedy: 7, dance: 5, design: 7, singing: 6, rusical: 6, rumix: 7, makeover: 8, lipsync: 7 } },
   { id: 30, dexId: 869, name: "Alcremie Ganache", originalName: 'Alcremie', personality: "Dessert Diva", entranceLine: "I'm the sugar rush that'll rot your chances.", stats: { acting: 6, improv: 6, comedy: 7, dance: 5, design: 9, singing: 8, rusical: 7, rumix: 6, makeover: 9, lipsync: 7 } },
+  { id: 31, dexId: 682, name: "Spritzee Sauvage", originalName: 'Spritzee', personality: "Perfume Priestess", entranceLine: "My scent alone will send you spinning.", stats: { acting: 6, improv: 6, comedy: 5, dance: 5, design: 8, singing: 8, rusical: 7, rumix: 6, makeover: 7, lipsync: 6 }, evolution: { name: "Aromatisse Sauvage", dexId: 683, stats: { acting: 8, improv: 7, comedy: 6, dance: 7, design: 9, singing: 9, rusical: 9, rumix: 7, makeover: 9, lipsync: 7 }, personality: "Opulent High Priestess", entranceLine: "Consider yourselves blessed by the glamour gods." } },
+  { id: 32, dexId: 762, name: "Steenee St. James", originalName: 'Steenee', personality: "Sugar-Coated Schemer", entranceLine: "I'm cute, I'm sweet, and I'm plotting your demise.", stats: { acting: 5, improv: 5, comedy: 6, dance: 7, design: 8, singing: 5, rusical: 6, rumix: 7, makeover: 7, lipsync: 8 }, evolution: { name: "Tsareena St. James", dexId: 763, stats: { acting: 7, improv: 7, comedy: 7, dance: 10, design: 10, singing: 6, rusical: 8, rumix: 9, makeover: 9, lipsync: 9 }, personality: "Dominant Diva", entranceLine: "Kneel, peasants. The empress has bloomed." } },
+  { id: 33, dexId: 872, name: "Snom Flurriosa", originalName: 'Snom', personality: "Icy Baby Doll", entranceLine: "Tiny, frosty, and ready to frost you out.", stats: { acting: 4, improv: 4, comedy: 6, dance: 5, design: 8, singing: 5, rusical: 5, rumix: 6, makeover: 8, lipsync: 6 }, evolution: { name: "Frosmoth Flurriosa", dexId: 873, stats: { acting: 6, improv: 6, comedy: 7, dance: 8, design: 10, singing: 7, rusical: 7, rumix: 7, makeover: 10, lipsync: 8 }, personality: "Crystal Couture", entranceLine: "Wings out, claws out. Blizzard chic has arrived." } },
+  { id: 34, dexId: 778, name: "Mimikyu Mirage", originalName: 'Mimikyu', personality: "Glamour Ghoul", entranceLine: "Boo! You just got haunted by haute couture.", stats: { acting: 7, improv: 6, comedy: 8, dance: 6, design: 9, singing: 5, rusical: 6, rumix: 6, makeover: 8, lipsync: 8 } },
+  { id: 35, dexId: 196, name: "Espeon Soleil", originalName: 'Espeon', personality: "Psychic It-Girl", entranceLine: "I already saw the finale. Spoiler: I'm in it.", stats: { acting: 8, improv: 8, comedy: 6, dance: 7, design: 8, singing: 7, rusical: 8, rumix: 8, makeover: 7, lipsync: 9 } },
+  { id: 36, dexId: 786, name: "Tapu Lele Extravaganza", originalName: 'Tapu Lele', personality: "Mythic Muse", entranceLine: "Sacred glam energy? Yeah, I invented that.", stats: { acting: 9, improv: 7, comedy: 6, dance: 8, design: 10, singing: 9, rusical: 9, rumix: 8, makeover: 10, lipsync: 8 } },
 ];
 
-type Phase = 'SETUP' | 'CAST_SELECTION' | 'ENTRANCES' | 'PROMO' | 'CHALLENGE_SELECTION' | 'CHALLENGE_INTRO' | 'PERFORMANCE' | 'JUDGING' | 'UNTUCKED' | 'LIPSYNC' | 'ELIMINATION' | 'FINALE' | 'SEASON_OVER';
+type Phase = 'SETUP' | 'CAST_SELECTION' | 'ENTRANCES' | 'PROMO' | 'CHALLENGE_SELECTION' | 'CHALLENGE_INTRO' | 'PERFORMANCE' | 'JUDGING' | 'RESULTS' | 'UNTUCKED' | 'LIPSYNC' | 'ELIMINATION' | 'FINALE' | 'SEASON_OVER';
 
 type ChallengeType = 'acting' | 'comedy' | 'dance' | 'design' | 'rusical' | 'makeover' | 'improv' | 'rumix' | 'snatch_game' | 'ball' | 'branding' | 'talent' | 'roast' | 'girl_groups';
 
@@ -197,6 +213,8 @@ const PLACEMENT_POINTS: Record<Placement, number> = {
     '': 0
 };
 
+const STAT_CATEGORIES: StatCategory[] = ['acting', 'improv', 'comedy', 'dance', 'design', 'singing', 'rusical', 'rumix', 'makeover', 'lipsync'];
+
 type PPEChartEntry = {
     name: string;
     fullName: string;
@@ -331,6 +349,13 @@ export default function PokeDragRaceSimulator() {
   const [splitPremiere, setSplitPremiere] = useState(false);
   const [competitionFormat, setCompetitionFormat] = useState<'standard' | 'allStars'>('standard');
   const [pendingLegacyElimination, setPendingLegacyElimination] = useState<{ winnerId: number; options: Queen[] } | null>(null);
+  const [latestResults, setLatestResults] = useState<Record<number, Placement>>({});
+  const [recentEvolution, setRecentEvolution] = useState<{
+      queenId: number;
+      fromName: string;
+      toName: string;
+      statBoosts: { stat: StatCategory; amount: number }[];
+  } | null>(null);
 
   // --- Derived State ---
   const activeQueens = useMemo(() => cast.filter(q => q.status === 'active'), [cast]);
@@ -347,6 +372,7 @@ export default function PokeDragRaceSimulator() {
   }, [activeQueens, splitPremiere, episodeCount]);
 
   const eliminatedQueens = useMemo(() => cast.filter(q => q.status === 'eliminated'), [cast]);
+  const evolvableQueens = useMemo(() => currentEpisodeQueens.filter(q => q.evolution && !q.hasEvolved), [currentEpisodeQueens]);
 
   // --- Phase Handlers ---
 
@@ -356,6 +382,9 @@ export default function PokeDragRaceSimulator() {
       setSplitPremiere(false);
       setCompetitionFormat('standard');
       setPendingLegacyElimination(null);
+      setUnsavedPlacements({});
+      setLatestResults({});
+      setRecentEvolution(null);
   }
 
   const toggleQueenSelection = (id: number) => {
@@ -378,6 +407,7 @@ export default function PokeDragRaceSimulator() {
         trackRecord: [],
         status: 'active' as const,
         confessionals: [],
+        hasEvolved: false,
       }));
 
       if (splitPremiere) {
@@ -411,14 +441,17 @@ export default function PokeDragRaceSimulator() {
       case 'PROMO': setPhase('CHALLENGE_SELECTION'); break;
       case 'CHALLENGE_SELECTION': setPhase('CHALLENGE_INTRO'); break;
       case 'CHALLENGE_INTRO': setPhase('PERFORMANCE'); break;
-      case 'PERFORMANCE': 
-        generateInitialPlacements(); 
-        setPhase('JUDGING'); 
+      case 'PERFORMANCE':
+        generateInitialPlacements();
+        setPhase('JUDGING');
         break;
-      case 'JUDGING': 
-        finalizePlacements(); 
-        setPhase('UNTUCKED'); 
+      case 'JUDGING':
+        finalizePlacements();
+        setPhase('RESULTS');
+        break;
+      case 'RESULTS':
         generateUntuckedDrama();
+        setPhase('UNTUCKED');
         break;
       case 'UNTUCKED': setPhase('LIPSYNC'); setupLipsync(); break;
       case 'ELIMINATION': 
@@ -443,6 +476,8 @@ export default function PokeDragRaceSimulator() {
 
   const generateChallenge = (challenge: Challenge) => {
     setCurrentChallenge(challenge);
+    setUnsavedPlacements({});
+    setLatestResults({});
     setChallengeHistory(prev => [...prev, challenge]);
     setCurrentStoryline(`Episode ${episodeCount}: The queens prepare for the ${challenge.name}.`);
   };
@@ -526,23 +561,26 @@ export default function PokeDragRaceSimulator() {
 
   const finalizePlacements = () => {
     const isSplitNonElim = splitPremiere && episodeCount <= 2;
+    const placements: Record<number, Placement> = {};
 
     setCast(prevCast => prevCast.map(q => {
       // If split premiere, queens NOT in current group get 'N/A' for this episode's track record
       if (splitPremiere && episodeCount <= 2 && q.group !== (episodeCount as 1|2)) {
+           placements[q.id] = 'N/A';
            return { ...q, trackRecord: [...q.trackRecord, 'N/A'] };
       }
 
       if (!currentEpisodeQueens.find(cq => cq.id === q.id)) return q;
 
       let placement = unsavedPlacements[q.id] || 'SAFE';
-      
-      // In split premiere, the 'WIN' initially assigned is just one of the TOP2 before the lipsync. 
+
+      // In split premiere, the 'WIN' initially assigned is just one of the TOP2 before the lipsync.
       // We'll formally mark both as TOP2 for now, and upgrade winner after lipsync.
-      // Actually, easier to mark them TOP2 now and upgrade one to WIN after LS.
       if (isSplitNonElim && (placement === 'WIN' || placement === 'TOP2')) {
           placement = 'TOP2';
       }
+
+      placements[q.id] = placement;
 
       const newConfessional = getConfessional(q, placement, 'JUDGING', currentChallenge?.type, currentEpisodeQueens);
       return {
@@ -552,6 +590,8 @@ export default function PokeDragRaceSimulator() {
       };
     }));
     setProducersMode(false);
+    setLatestResults(placements);
+    setCurrentStoryline('The judges have made their decision. Let\'s hear the results!');
   };
 
   const generateUntuckedDrama = () => {
@@ -573,6 +613,51 @@ export default function PokeDragRaceSimulator() {
         setCurrentStoryline(`Untucked: The drama! ${instigator.name} ${topics[Math.floor(Math.random() * topics.length)]}.`);
     } else {
         setCurrentStoryline("Untucked: Everyone is being fake nice. It's suspicious.");
+    }
+  };
+
+  const handleEvolution = (queenId: number) => {
+    let evolutionDetails: {
+        queenId: number;
+        fromName: string;
+        toName: string;
+        statBoosts: { stat: StatCategory; amount: number }[];
+    } | null = null;
+
+    setCast(prev => prev.map(q => {
+        if (q.id !== queenId || !q.evolution || q.hasEvolved) {
+            return q;
+        }
+
+        const fromName = q.name;
+        const evolved = q.evolution;
+        const statBoosts = STAT_CATEGORIES.map(stat => ({
+            stat,
+            amount: evolved.stats[stat] - q.stats[stat]
+        })).filter(boost => boost.amount > 0);
+
+        evolutionDetails = {
+            queenId,
+            fromName,
+            toName: evolved.name,
+            statBoosts
+        };
+
+        return {
+            ...q,
+            name: evolved.name,
+            dexId: evolved.dexId,
+            stats: evolved.stats,
+            personality: evolved.personality ?? q.personality,
+            entranceLine: evolved.entranceLine ?? q.entranceLine,
+            hasEvolved: true,
+            confessionals: [`Did you clock that glow up? ${fromName} just became ${evolved.name}.`, ...q.confessionals].slice(0, 10)
+        };
+    }));
+
+    if (evolutionDetails) {
+        setRecentEvolution(evolutionDetails);
+        setCurrentStoryline(`${evolutionDetails.fromName} evolves into ${evolutionDetails.toName}! The werkroom is gagged.`);
     }
   };
 
@@ -777,7 +862,37 @@ export default function PokeDragRaceSimulator() {
 
       {/* Main Stage Area */}
       <div className="flex-grow bg-gradient-to-b from-pink-50 to-purple-100 p-6 overflow-y-auto">
-        
+
+        {recentEvolution && (() => {
+            const evolvedQueen = cast.find(q => q.id === recentEvolution?.queenId);
+            if (!evolvedQueen) return null;
+            return (
+                <div className="max-w-4xl mx-auto mb-8">
+                    <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-rose-500 text-white rounded-3xl p-6 shadow-2xl border border-white/40 relative overflow-hidden">
+                        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top,_#fff_0%,_transparent_70%)]"></div>
+                        <div className="flex flex-col md:flex-row items-center md:items-start md:space-x-6 relative z-10">
+                            <img src={getQueenImg(evolvedQueen.dexId)} className="w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-white/70 bg-white/30 shadow-lg" />
+                            <div className="flex-1 text-center md:text-left mt-4 md:mt-0">
+                                <h3 className="text-sm uppercase tracking-[0.4em] text-white/80">Evolution Boost</h3>
+                                <p className="text-2xl font-extrabold mt-2">{recentEvolution.fromName} ➜ {recentEvolution.toName}</p>
+                                <p className="text-sm text-white/80 mt-2 max-w-xl">New glamour unlocked! These boosted stats will shake up the competition.</p>
+                                {recentEvolution.statBoosts.length > 0 && (
+                                    <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-4">
+                                        {recentEvolution.statBoosts.map(boost => (
+                                            <span key={boost.stat} className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold">
+                                                {boost.stat.charAt(0).toUpperCase() + boost.stat.slice(1)} +{boost.amount}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <button onClick={() => setRecentEvolution(null)} className="mt-4 md:mt-0 md:ml-4 bg-white/20 hover:bg-white/30 text-xs uppercase tracking-widest px-4 py-2 rounded-full">Dismiss</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        })()}
+
         {phase === 'SETUP' && (
           <div className="flex flex-col items-center justify-center h-full space-y-8">
             <Crown size={100} className="text-pink-600 animate-pulse" />
@@ -962,6 +1077,31 @@ export default function PokeDragRaceSimulator() {
                             );
                         })}
                     </div>
+                    {evolvableQueens.length > 0 && (
+                        <div className="mt-6 bg-purple-900/40 border border-purple-500/60 rounded-2xl p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div>
+                                    <p className="text-[11px] uppercase tracking-[0.3em] text-purple-200">Evolution Boost</p>
+                                    <h4 className="text-lg font-bold">Trigger a Mid-Season Evolution</h4>
+                                </div>
+                                <Sparkles size={20} className="text-yellow-300" />
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                {evolvableQueens.map(queen => (
+                                    <div key={queen.id} className="bg-purple-950/60 border border-purple-700 rounded-xl p-3 flex items-center justify-between">
+                                        <div className="flex items-center space-x-3">
+                                            <img src={getQueenImg(queen.dexId)} className="w-12 h-12 rounded-full border border-purple-500" />
+                                            <div>
+                                                <div className="font-semibold text-sm">{queen.name}</div>
+                                                <div className="text-[10px] uppercase tracking-widest text-purple-300">Ready to evolve</div>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => handleEvolution(queen.id)} className="bg-gradient-to-r from-purple-400 to-pink-400 text-gray-900 font-bold text-xs uppercase tracking-widest px-4 py-2 rounded-full hover:from-purple-300 hover:to-pink-300">Evolve</button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -978,6 +1118,162 @@ export default function PokeDragRaceSimulator() {
             </div>
           </div>
         )}
+
+        {phase === 'RESULTS' && (() => {
+            const entries = (Object.entries(latestResults)
+                .map(([id, placement]) => {
+                    const queen = cast.find(q => q.id === Number(id));
+                    if (!queen || placement === 'N/A' || placement === '') return null;
+                    return { queen, placement };
+                })
+                .filter(Boolean) as { queen: Queen; placement: Placement }[])
+                .sort((a, b) => {
+                    const order: Record<Placement, number> = {
+                        WIN: 0,
+                        TOP2: 1,
+                        HIGH: 2,
+                        SAFE: 3,
+                        LOW: 4,
+                        BTM2: 5,
+                        ELIM: 6,
+                        'RUNNER-UP': 7,
+                        'WINNER': 8,
+                        'N/A': 9,
+                        '': 10
+                    };
+                    return order[a.placement] - order[b.placement];
+                });
+
+            const winners = entries.filter(e => e.placement === 'WIN');
+            const topTwo = entries.filter(e => e.placement === 'TOP2');
+            const highs = entries.filter(e => e.placement === 'HIGH');
+            const safes = entries.filter(e => e.placement === 'SAFE');
+            const dangers = entries.filter(e => ['LOW', 'BTM2', 'ELIM'].includes(e.placement));
+
+            const headline = winners.length
+                ? `Condragulations ${winners.map(w => w.queen.name).join(' & ')}!`
+                : topTwo.length
+                    ? `${topTwo.map(t => t.queen.name).join(' & ')} top the week!`
+                    : highs.length
+                        ? `${highs[0].queen.name} leads the pack!`
+                        : 'Results are in!';
+
+            return (
+                <div className="space-y-8 max-w-6xl mx-auto">
+                    <div className="bg-white rounded-3xl shadow-2xl border border-pink-200 p-8 text-center relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-pink-100 via-purple-100 to-pink-100 opacity-70"></div>
+                        <div className="relative z-10 space-y-4">
+                            <div className="flex justify-center">
+                                <Megaphone size={48} className="text-pink-500" />
+                            </div>
+                            <p className="text-sm uppercase tracking-[0.5em] text-pink-500">Main Stage Verdict</p>
+                            <h2 className="text-4xl font-extrabold text-pink-900">{headline}</h2>
+                            <p className="text-gray-600 max-w-3xl mx-auto">Episode {episodeCount} • {currentChallenge?.name || 'Main Stage Extravaganza'} • PPE insights updated</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {winners.length > 0 && (
+                            <div className="bg-gradient-to-br from-yellow-300 via-amber-200 to-yellow-100 rounded-3xl p-6 shadow-xl border border-yellow-400/60">
+                                <h3 className="text-xs uppercase tracking-widest text-yellow-700">Episode Winner</h3>
+                                {winners.map(({ queen }) => (
+                                    <div key={queen.id} className="flex items-center space-x-3 mt-3">
+                                        <img src={getQueenImg(queen.dexId)} className="w-14 h-14 rounded-full border-2 border-yellow-500 bg-white" />
+                                        <div>
+                                            <div className="font-bold text-lg text-yellow-900">{queen.name}</div>
+                                            <div className="text-xs uppercase tracking-widest text-yellow-700">PPE {formatPPE(calculatePPE(queen.trackRecord))}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {topTwo.length > 0 && (
+                            <div className="bg-gradient-to-br from-purple-200 via-pink-200 to-purple-100 rounded-3xl p-6 shadow-xl border border-purple-300/60">
+                                <h3 className="text-xs uppercase tracking-widest text-purple-700">Top Placement</h3>
+                                {topTwo.map(({ queen }) => (
+                                    <div key={queen.id} className="flex items-center space-x-3 mt-3">
+                                        <img src={getQueenImg(queen.dexId)} className="w-14 h-14 rounded-full border-2 border-purple-400 bg-white" />
+                                        <div>
+                                            <div className="font-bold text-lg text-purple-900">{queen.name}</div>
+                                            <div className="text-xs uppercase tracking-widest text-purple-600">Lip syncs survived {queen.trackRecord.filter(p => p === 'BTM2' || p === 'ELIM').length}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {highs.length > 0 && (
+                            <div className="bg-gradient-to-br from-pink-200 via-rose-200 to-pink-100 rounded-3xl p-6 shadow-xl border border-pink-300/60">
+                                <h3 className="text-xs uppercase tracking-widest text-pink-700">High Notes</h3>
+                                {highs.map(({ queen }) => (
+                                    <div key={queen.id} className="flex items-center space-x-3 mt-3">
+                                        <img src={getQueenImg(queen.dexId)} className="w-14 h-14 rounded-full border-2 border-pink-400 bg-white" />
+                                        <div>
+                                            <div className="font-bold text-lg text-pink-900">{queen.name}</div>
+                                            <div className="text-xs uppercase tracking-widest text-pink-600">Wins {queen.trackRecord.filter(p => p === 'WIN').length}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {safes.length > 0 && (
+                        <div className="bg-white rounded-3xl border border-pink-100 p-6 shadow-md">
+                            <h3 className="text-xs uppercase tracking-[0.5em] text-gray-400">Safe This Week</h3>
+                            <div className="flex flex-wrap gap-3 mt-4">
+                                {safes.map(({ queen }) => (
+                                    <span key={queen.id} className="bg-pink-50 border border-pink-100 px-4 py-2 rounded-full text-sm font-semibold text-pink-600 shadow-sm">{queen.name}</span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="bg-white rounded-3xl border border-pink-200 shadow-xl">
+                        <div className="px-6 py-4 border-b border-pink-100 flex items-center justify-between">
+                            <h3 className="text-sm uppercase tracking-[0.4em] text-pink-600">Full Results Breakdown</h3>
+                            <Sparkles className="text-pink-400" />
+                        </div>
+                        <div className="divide-y divide-pink-50">
+                            {entries.map(({ queen, placement }) => (
+                                <div key={queen.id} className="flex flex-col md:flex-row md:items-center md:justify-between px-6 py-4 gap-3">
+                                    <div className="flex items-center space-x-3">
+                                        <img src={getQueenImg(queen.dexId)} className="w-12 h-12 rounded-full border-2 border-pink-200" />
+                                        <div>
+                                            <div className="font-bold text-pink-900">{queen.name}</div>
+                                            <div className="text-xs text-gray-500 uppercase tracking-widest">PPE {formatPPE(calculatePPE(queen.trackRecord))}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center space-x-4">
+                                        <MiniTrackRecord trackRecord={queen.trackRecord} />
+                                        <PlacementBadge placement={placement} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {dangers.length > 0 && (
+                        <div className="bg-gradient-to-br from-rose-100 via-red-100 to-rose-50 border border-rose-200 rounded-3xl p-6 shadow-lg">
+                            <h3 className="text-xs uppercase tracking-[0.4em] text-rose-500">On the Edge</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                                {dangers.map(({ queen, placement }) => (
+                                    <div key={queen.id} className="bg-white/80 rounded-2xl p-4 border border-rose-200 shadow-sm">
+                                        <div className="flex items-center space-x-3">
+                                            <img src={getQueenImg(queen.dexId)} className="w-12 h-12 rounded-full border border-rose-300" />
+                                            <div>
+                                                <div className="font-semibold text-rose-700">{queen.name}</div>
+                                                <div className="text-[11px] uppercase tracking-widest text-rose-500">{placement === 'ELIM' ? 'Eliminated' : placement === 'BTM2' ? 'Lip Sync Survivor?' : 'Critiqued'}</div>
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 text-xs text-rose-600">Bottoms this season: {queen.trackRecord.filter(p => p === 'BTM2' || p === 'ELIM').length}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        })()}
 
         {phase === 'UNTUCKED' && (
             <div className="h-full flex items-center justify-center">
@@ -1098,7 +1394,7 @@ export default function PokeDragRaceSimulator() {
       {['CAST_SELECTION', 'SETUP', 'SEASON_OVER'].every(p => p !== phase) && (
         <div className="bg-white/90 backdrop-blur-md p-4 border-t-4 border-pink-500 flex justify-between items-center shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.1)] sticky bottom-0 z-20">
           <div className="text-pink-900 italic font-semibold truncate max-w-xl px-4 border-l-4 border-pink-300">{currentStoryline}</div>
-          {['PROMO','ENTRANCES','CHALLENGE_SELECTION','CHALLENGE_INTRO','PERFORMANCE','JUDGING','UNTUCKED','ELIMINATION'].includes(phase) && (
+          {['PROMO','ENTRANCES','CHALLENGE_SELECTION','CHALLENGE_INTRO','PERFORMANCE','JUDGING','RESULTS','UNTUCKED','ELIMINATION'].includes(phase) && (
              <button
                onClick={nextPhase}
                disabled={phase === 'ELIMINATION' && !!pendingLegacyElimination}

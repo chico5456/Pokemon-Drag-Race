@@ -10,7 +10,7 @@ import {
 type StatCategory = 'acting' | 'improv' | 'comedy' | 'dance' | 'design' | 'singing' | 'rusical' | 'rumix' | 'makeover' | 'lipsync';
 type Stats = Record<StatCategory, number>;
 
-type Placement = 'WIN' | 'TOP2' | 'HIGH' | 'SAFE' | 'LOW' | 'BTM2' | 'ELIM' | 'RUNNER-UP' | 'WINNER' | 'N/A' | '';
+type Placement = 'WIN' | 'WIN+OUT' | 'TOP2' | 'HIGH' | 'SAFE' | 'LOW' | 'BTM2' | 'ELIM' | 'RUNNER-UP' | 'WINNER' | 'N/A' | '';
 
 type QueenForm = {
   name: string;
@@ -1009,6 +1009,7 @@ const getConfessional = (queen: Queen, placement: Placement, phase: Phase, chall
 
 const PLACEMENT_POINTS: Record<Placement, number> = {
     WIN: 5,
+    'WIN+OUT': 5,
     TOP2: 4.5,
     HIGH: 4,
     SAFE: 3,
@@ -1065,7 +1066,7 @@ const PPEBarChart: React.FC<{ data: PPEChartEntry[]; palette: string[] }> = ({ d
     );
 };
 
-const COMPETITIVE_PLACEMENTS: Placement[] = ['WIN', 'TOP2', 'HIGH', 'SAFE', 'LOW', 'BTM2', 'ELIM'];
+const COMPETITIVE_PLACEMENTS: Placement[] = ['WIN', 'WIN+OUT', 'TOP2', 'HIGH', 'SAFE', 'LOW', 'BTM2', 'ELIM'];
 
 const calculatePPE = (trackRecord: Placement[]): number => {
     const { totalScore, competitiveEpisodes } = trackRecord.reduce(
@@ -1102,6 +1103,11 @@ const summarizePlacements = (trackRecord: Placement[]) => {
         switch (placement) {
             case 'WIN':
                 summary.wins += 1;
+                summary.competitiveEpisodes += 1;
+                break;
+            case 'WIN+OUT':
+                summary.wins += 1;
+                summary.elims += 1;
                 summary.competitiveEpisodes += 1;
                 break;
             case 'TOP2':
@@ -1191,31 +1197,32 @@ export default function PokeDragRaceSimulator() {
       if (
           competitionFormat === 'allStars' &&
           phase === 'CHALLENGE_SELECTION' &&
-          episodeCount === 5 &&
+          episodeCount === 6 &&
           !revengeEpisodeTriggered
       ) {
+          setRevengeEpisodeTriggered(true);
+
           const eliminated = cast.filter(q => q.status === 'eliminated');
-          if (eliminated.length === 0) {
-              setRevengeEpisodeTriggered(true);
+          const activePool = [...activeQueens];
+          const pairCount = Math.min(eliminated.length, activePool.length);
+
+          if (pairCount < 2) {
+              setRevengeEpisodeActive(false);
+              setRevengeReturneeIds([]);
+              setRevengePairings([]);
               return;
           }
 
-          setRevengeEpisodeTriggered(true);
+          const returneePool = eliminated.slice(0, pairCount);
+          const partnerPool = activePool.slice(0, pairCount);
+          const pairings: { returneeId: number; partnerId: number }[] = returneePool.map((returnee, index) => ({
+              returneeId: returnee.id,
+              partnerId: partnerPool[index]?.id ?? activePool[index % activePool.length].id
+          }));
+
           setRevengeEpisodeActive(true);
-          setRevengeReturneeIds(eliminated.map(q => q.id));
-
-          const activePool = [...activeQueens];
-          if (activePool.length > 0) {
-              const pairings: { returneeId: number; partnerId: number }[] = [];
-              eliminated.forEach((returnee, index) => {
-                  const partner = activePool[index % activePool.length];
-                  pairings.push({ returneeId: returnee.id, partnerId: partner.id });
-              });
-              setRevengePairings(pairings);
-          } else {
-              setRevengePairings([]);
-          }
-
+          setRevengeReturneeIds(returneePool.map(q => q.id));
+          setRevengePairings(pairings);
           setCurrentStoryline('All the eliminated queens storm back into the werkroom for REVENGE OF THE QUEENS!');
       }
   }, [competitionFormat, phase, episodeCount, revengeEpisodeTriggered, cast, activeQueens]);
@@ -1394,48 +1401,72 @@ export default function PokeDragRaceSimulator() {
     const isAllStarsEpisode = competitionFormat === 'allStars' && !isSplitNonElim;
 
     if (revengeEpisodeActive) {
-        const activeCompetitors = currentEpisodeQueens.filter(q => q.status === 'active');
-        const returnees = currentEpisodeQueens.filter(q => revengeReturneeIds.includes(q.id));
+        const pairDetails = revengePairings
+            .map(pairing => {
+                const returnee = currentEpisodeQueens.find(q => q.id === pairing.returneeId);
+                const partner = currentEpisodeQueens.find(q => q.id === pairing.partnerId);
+                if (!returnee || !partner) return null;
+                const returneeScore = calculatePerformance(returnee, currentChallenge, modifiers);
+                const partnerScore = calculatePerformance(partner, currentChallenge, modifiers);
+                return {
+                    pairing,
+                    returnee,
+                    partner,
+                    totalScore: returneeScore + partnerScore
+                };
+            })
+            .filter((entry): entry is {
+                pairing: { returneeId: number; partnerId: number };
+                returnee: Queen;
+                partner: Queen;
+                totalScore: number;
+            } => Boolean(entry))
+            .sort((a, b) => b.totalScore - a.totalScore);
+
         const placements: Record<number, Placement> = {};
 
-        activeCompetitors.forEach(q => { placements[q.id] = 'SAFE'; });
-        returnees.forEach(q => { placements[q.id] = 'SAFE'; });
-
-        const activeScores = activeCompetitors
-            .map(q => ({ id: q.id, score: calculatePerformance(q, currentChallenge, modifiers) }))
-            .sort((a, b) => b.score - a.score);
-        const returneeScores = returnees
-            .map(q => ({ id: q.id, score: calculatePerformance(q, currentChallenge, modifiers) }))
-            .sort((a, b) => b.score - a.score);
-
-        if (activeScores.length > 0) {
-            placements[activeScores[0].id] = 'HIGH';
-            if (activeScores.length > 1) {
-                placements[activeScores[1].id] = 'HIGH';
-            }
-            if (activeScores.length > 3) {
-                placements[activeScores[activeScores.length - 3].id] = 'LOW';
-            }
-            if (activeScores.length > 1) {
-                const bottomTwo = activeScores.slice(-2);
-                setRevengeBottomIds(bottomTwo.map(entry => entry.id));
-                bottomTwo.forEach(entry => {
-                    placements[entry.id] = 'BTM2';
-                });
-            } else {
-                setRevengeBottomIds([]);
-            }
-        }
-
-        if (returneeScores.length > 0) {
-            const topReturnees = returneeScores.slice(0, Math.min(2, returneeScores.length));
-            setRevengeTopReturneeIds(topReturnees.map(entry => entry.id));
-            topReturnees.forEach(entry => {
-                placements[entry.id] = 'TOP2';
-            });
-        } else {
+        if (pairDetails.length === 0) {
             setRevengeTopReturneeIds([]);
+            setRevengeBottomIds([]);
+            setUnsavedPlacements(placements);
+            return;
         }
+
+        const topPairs = pairDetails.slice(0, Math.min(2, pairDetails.length));
+        const safePair = pairDetails.length > 2 ? pairDetails[2] : null;
+        const bottomPairs = pairDetails.slice(-Math.min(2, Math.max(pairDetails.length - 2, 0)));
+
+        const topReturneeIds = topPairs.map(entry => entry.returnee.id);
+        setRevengeTopReturneeIds(topReturneeIds);
+
+        const bottomActiveIds = bottomPairs.map(entry => entry.partner.id);
+        setRevengeBottomIds(bottomActiveIds);
+
+        pairDetails.forEach(entry => {
+            placements[entry.returnee.id] = 'SAFE';
+            placements[entry.partner.id] = 'SAFE';
+        });
+
+        topPairs.forEach(entry => {
+            placements[entry.returnee.id] = 'TOP2';
+            placements[entry.partner.id] = 'TOP2';
+        });
+
+        if (safePair) {
+            placements[safePair.returnee.id] = 'SAFE';
+            placements[safePair.partner.id] = 'SAFE';
+        }
+
+        bottomPairs.forEach(entry => {
+            placements[entry.returnee.id] = 'BTM2';
+            placements[entry.partner.id] = 'BTM2';
+        });
+
+        currentEpisodeQueens.forEach(q => {
+            if (!placements[q.id]) {
+                placements[q.id] = 'SAFE';
+            }
+        });
 
         setUnsavedPlacements(placements);
         return;
@@ -1534,7 +1565,8 @@ export default function PokeDragRaceSimulator() {
 
       placements[q.id] = placement;
 
-      const newConfessional = getConfessional(q, placement, 'JUDGING', currentChallenge?.type, currentEpisodeQueens);
+      const confessionalPlacement: Placement = placement === 'WIN+OUT' ? 'WIN' : placement;
+      const newConfessional = getConfessional(q, confessionalPlacement, 'JUDGING', currentChallenge?.type, currentEpisodeQueens);
       return {
         ...q,
         trackRecord: [...q.trackRecord, placement],
@@ -1548,9 +1580,9 @@ export default function PokeDragRaceSimulator() {
 
   const generateUntuckedDrama = () => {
     const isSplitNonElim = splitPremiere && episodeCount <= 2;
-    const safeQueens = currentEpisodeQueens.filter(q => ['SAFE', 'HIGH', 'WIN'].includes(unsavedPlacements[q.id]));
+    const safeQueens = currentEpisodeQueens.filter(q => ['SAFE', 'HIGH', 'WIN', 'WIN+OUT'].includes(unsavedPlacements[q.id]));
     const bottomQueens = currentEpisodeQueens.filter(q => ['LOW', 'BTM2'].includes(unsavedPlacements[q.id]));
-    const top2Queens = currentEpisodeQueens.filter(q => unsavedPlacements[q.id] === 'TOP2' || unsavedPlacements[q.id] === 'WIN');
+    const top2Queens = currentEpisodeQueens.filter(q => ['TOP2', 'WIN', 'WIN+OUT'].includes(unsavedPlacements[q.id]));
 
     if (isSplitNonElim && top2Queens.length >= 2) {
         setCurrentStoryline(`Untucked: ${top2Queens[0].name} and ${top2Queens[1].name} are sizing each other up for the lip sync win.`);
@@ -1651,51 +1683,102 @@ export default function PokeDragRaceSimulator() {
     const isSplitNonElim = splitPremiere && episodeCount <= 2;
     const isAllStarsEpisode = competitionFormat === 'allStars' && !isSplitNonElim;
 
-    if (doubleShantay && !isSplitNonElim && !isAllStarsEpisode) {
-        if (doubleShantayUsed) { alert("Already used!"); return; }
-        setDoubleShantayUsed(true);
-        setCurrentStoryline("Shantay you BOTH stay! (Double Shantay used)");
-        setPhase('ELIMINATION');
-        return;
-    }
-
     if (revengeEpisodeActive && revengeTopReturneeIds.length > 0) {
-        const winners = revengeTopReturneeIds
+        const winningReturneeIds = doubleShantay
+            ? [...revengeTopReturneeIds]
+            : revengeTopReturneeIds.includes(winnerId)
+                ? [winnerId]
+                : [];
+
+        if (winningReturneeIds.length === 0) {
+            return;
+        }
+
+        const winningReturnees = winningReturneeIds
             .map(id => cast.find(q => q.id === id))
             .filter((q): q is Queen => Boolean(q));
-        const winnerNames = winners.map(w => w.name).join(' & ');
-        const losingReturnees = revengeReturneeIds.filter(id => !revengeTopReturneeIds.includes(id));
+        const losingReturneeIds = revengeTopReturneeIds.filter(id => !winningReturneeIds.includes(id));
+        const losingReturnees = losingReturneeIds
+            .map(id => cast.find(q => q.id === id))
+            .filter((q): q is Queen => Boolean(q));
+
+        const partnerIds = revengePairings
+            .filter(pair => winningReturneeIds.includes(pair.returneeId))
+            .map(pair => pair.partnerId);
 
         setCast(prev => prev.map(q => {
-            if (revengeTopReturneeIds.includes(q.id)) {
+            if (winningReturneeIds.includes(q.id)) {
                 const tr = [...q.trackRecord];
                 tr[tr.length - 1] = 'WIN';
                 return {
                     ...q,
                     status: 'active',
                     trackRecord: tr,
-                    confessionals: ["I'm back in the race and ready to slay!", ...q.confessionals].slice(0, 10)
+                    confessionals: [
+                        "I'm back in the race and ready to slay!",
+                        ...q.confessionals
+                    ].slice(0, 10)
                 };
             }
-            if (losingReturnees.includes(q.id)) {
+            if (losingReturneeIds.includes(q.id)) {
                 const tr = [...q.trackRecord];
-                tr.pop();
-                return { ...q, trackRecord: tr };
+                tr[tr.length - 1] = 'WIN+OUT';
+                return {
+                    ...q,
+                    status: 'eliminated',
+                    trackRecord: tr,
+                    confessionals: [
+                        "I won the challenge but still have to sashay away... again!",
+                        ...q.confessionals
+                    ].slice(0, 10)
+                };
+            }
+            if (partnerIds.includes(q.id)) {
+                const tr = [...q.trackRecord];
+                tr[tr.length - 1] = 'WIN';
+                return {
+                    ...q,
+                    trackRecord: tr,
+                    confessionals: [
+                        "My returning sister and I just snatched that victory!",
+                        ...q.confessionals
+                    ].slice(0, 10)
+                };
             }
             return q;
         }));
 
+        setLatestResults(prev => {
+            const updated = { ...prev };
+            winningReturneeIds.forEach(id => { updated[id] = 'WIN'; });
+            partnerIds.forEach(id => { updated[id] = 'WIN'; });
+            losingReturneeIds.forEach(id => { updated[id] = 'WIN+OUT'; });
+            return updated;
+        });
+
         const bottomQueens = currentEpisodeQueens.filter(q => revengeBottomIds.includes(q.id));
+        const winnerNames = winningReturnees.map(w => w.name).join(' & ');
+        const allyIds = winningReturnees.slice(1).map(w => w.id);
+        const loserNames = losingReturnees.map(l => l.name).join(' & ');
+
         if (bottomQueens.length > 0) {
             setPendingLegacyElimination({
-                winnerId: winners[0]?.id ?? revengeTopReturneeIds[0],
+                winnerId: winningReturnees[0]?.id ?? winningReturneeIds[0],
                 options: bottomQueens,
-                allies: winners.slice(1).map(w => w.id)
+                allies: allyIds
             });
-            setCurrentStoryline(`${winnerNames} return to the competition and now decide who will sashay away.`);
+            setCurrentStoryline(
+                losingReturnees.length > 0
+                    ? `${winnerNames} return to the competition while ${loserNames} must exit once more. The power now shifts to the returning legend${winningReturnees.length > 1 ? 's' : ''}.`
+                    : `${winnerNames} return to the competition! Time to decide which bottom queen will sashay away.`
+            );
         } else {
             setPendingLegacyElimination(null);
-            setCurrentStoryline(`${winnerNames} return to the competition! No one is up for elimination this week.`);
+            setCurrentStoryline(
+                losingReturnees.length > 0
+                    ? `${winnerNames} return to the competition, but ${loserNames} have to say goodbye again. No eliminations this week.`
+                    : `${winnerNames} return to the competition! No one is up for elimination this week.`
+            );
         }
 
         setRevengeEpisodeActive(false);
@@ -1703,6 +1786,14 @@ export default function PokeDragRaceSimulator() {
         setRevengeTopReturneeIds([]);
         setRevengeBottomIds([]);
         setRevengePairings([]);
+        setPhase('ELIMINATION');
+        return;
+    }
+
+    if (doubleShantay && !isSplitNonElim && !isAllStarsEpisode) {
+        if (doubleShantayUsed) { alert("Already used!"); return; }
+        setDoubleShantayUsed(true);
+        setCurrentStoryline("Shantay you BOTH stay! (Double Shantay used)");
         setPhase('ELIMINATION');
         return;
     }
@@ -1833,6 +1924,7 @@ export default function PokeDragRaceSimulator() {
           {trackRecord.map((placement, idx) => {
              const style = {
                  'WIN': { backgroundColor: 'royalblue' },
+                 'WIN+OUT': { backgroundColor: 'mediumslateblue' },
                  'TOP2': { backgroundColor: 'deepskyblue' },
                  'HIGH': { backgroundColor: 'lightblue' },
                  'LOW': { backgroundColor: 'lightpink' },
@@ -1851,6 +1943,7 @@ export default function PokeDragRaceSimulator() {
   const PlacementBadge = ({ placement }: { placement: Placement }) => {
     const styleColors: Record<string, React.CSSProperties> = {
       'WIN': { backgroundColor: 'royalblue', borderColor: 'darkblue', color: 'white' },
+      'WIN+OUT': { backgroundColor: 'mediumslateblue', borderColor: 'rebeccapurple', color: 'white', fontWeight: 'bold' },
       'TOP2': { backgroundColor: 'deepskyblue', borderColor: 'dodgerblue', color: 'white', fontWeight: 'bold' },
       'HIGH': { backgroundColor: 'lightblue', borderColor: 'deepskyblue', color: 'darkblue' },
       'LOW': { backgroundColor: 'lightpink', borderColor: 'pink', color: 'darkred' },
@@ -2204,7 +2297,7 @@ export default function PokeDragRaceSimulator() {
                                         >
                                             {(splitPremiere && episodeCount <= 2)
                                                 ? ['WIN', 'TOP2', 'HIGH', 'SAFE', 'LOW'].map(p => <option key={p} value={p}>{p}</option>)
-                                                : ['WIN', 'TOP2', 'HIGH', 'SAFE', 'LOW', 'BTM2'].map(p => <option key={p} value={p}>{p}</option>)
+                                                : ['WIN', 'WIN+OUT', 'TOP2', 'HIGH', 'SAFE', 'LOW', 'BTM2'].map(p => <option key={p} value={p}>{p}</option>)
                                             }
                                         </select>
                                     </div>
@@ -2255,8 +2348,8 @@ export default function PokeDragRaceSimulator() {
             )}
 
             <div className="grid gap-3">
-              {currentEpisodeQueens.sort((a,b) => { 
-                  const order = { 'WIN': 0, 'TOP2': 1, 'HIGH': 2, 'SAFE': 3, 'LOW': 4, 'BTM2': 5 };
+              {currentEpisodeQueens.sort((a,b) => {
+                  const order = { 'WIN': 0, 'WIN+OUT': 1, 'TOP2': 2, 'HIGH': 3, 'SAFE': 4, 'LOW': 5, 'BTM2': 6 } as Record<Placement, number>;
                   return (order[unsavedPlacements[a.id] as keyof typeof order] || 3) - (order[unsavedPlacements[b.id] as keyof typeof order] || 3);
               }).map(queen => (
                 <div key={queen.id} className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border-l-4 border-pink-300">
@@ -2279,21 +2372,22 @@ export default function PokeDragRaceSimulator() {
                 .sort((a, b) => {
                     const order: Record<Placement, number> = {
                         WIN: 0,
-                        TOP2: 1,
-                        HIGH: 2,
-                        SAFE: 3,
-                        LOW: 4,
-                        BTM2: 5,
-                        ELIM: 6,
-                        'RUNNER-UP': 7,
-                        'WINNER': 8,
-                        'N/A': 9,
-                        '': 10
+                        'WIN+OUT': 1,
+                        TOP2: 2,
+                        HIGH: 3,
+                        SAFE: 4,
+                        LOW: 5,
+                        BTM2: 6,
+                        ELIM: 7,
+                        'RUNNER-UP': 8,
+                        'WINNER': 9,
+                        'N/A': 10,
+                        '': 11
                     };
                     return order[a.placement] - order[b.placement];
                 });
 
-            const winners = entries.filter(e => e.placement === 'WIN');
+            const winners = entries.filter(e => ['WIN', 'WIN+OUT'].includes(e.placement));
             const topTwo = entries.filter(e => e.placement === 'TOP2');
             const highs = entries.filter(e => e.placement === 'HIGH');
             const safes = entries.filter(e => e.placement === 'SAFE');
@@ -2358,7 +2452,7 @@ export default function PokeDragRaceSimulator() {
                                         <img src={getQueenImg(queen.dexId)} className="w-14 h-14 rounded-full border-2 border-pink-400 bg-white" />
                                         <div>
                                             <div className="font-bold text-lg text-pink-900">{queen.name}</div>
-                                            <div className="text-xs uppercase tracking-widest text-pink-600">Wins {queen.trackRecord.filter(p => p === 'WIN').length}</div>
+                                            <div className="text-xs uppercase tracking-widest text-pink-600">Wins {queen.trackRecord.filter(p => p === 'WIN' || p === 'WIN+OUT').length}</div>
                                         </div>
                                     </div>
                                 ))}
@@ -2452,7 +2546,7 @@ export default function PokeDragRaceSimulator() {
             </div>
             
             <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-16">
-               {lipsyncPair.map((queen, idx) => (
+                {lipsyncPair.map((queen, idx) => (
                    <div key={queen.id} className="group flex flex-col items-center cursor-pointer" onClick={() => handleLipsyncWinner(queen.id)}>
                        <div className="relative transition-transform duration-300 group-hover:-translate-y-4 group-hover:scale-105">
                            <img src={getQueenImg(queen.dexId)} className="w-48 h-48 mx-auto drop-shadow-2xl relative z-10" />
@@ -2469,6 +2563,14 @@ export default function PokeDragRaceSimulator() {
                    </div>
                ))}
            </div>
+            {revengeEpisodeActive && revengeTopReturneeIds.length === 2 && (
+                <button
+                    onClick={() => handleLipsyncWinner(0, true)}
+                    className="bg-purple-100 text-purple-700 px-6 py-3 rounded-full font-bold hover:bg-purple-200"
+                >
+                    Double Return (Both Come Back)
+                </button>
+            )}
             {!(splitPremiere && episodeCount <= 2) && competitionFormat !== 'allStars' && (
                  <button onClick={() => handleLipsyncWinner(0, true)} disabled={doubleShantayUsed} className="bg-pink-100 text-pink-800 px-6 py-3 rounded-full font-bold hover:bg-pink-200 disabled:opacity-50">
                     {doubleShantayUsed ? "Double Shantay Used" : "Double Shantay (Both Stay)"}

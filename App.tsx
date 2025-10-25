@@ -12,13 +12,21 @@ type Stats = Record<StatCategory, number>;
 
 type Placement = 'WIN' | 'TOP2' | 'HIGH' | 'SAFE' | 'LOW' | 'BTM2' | 'ELIM' | 'RUNNER-UP' | 'WINNER' | 'N/A' | '';
 
-type EvolutionData = {
+type QueenForm = {
   name: string;
   dexId: number;
+  originalName: string;
   stats: Stats;
-  personality?: string;
-  entranceLine?: string;
+  personality: string;
+  entranceLine: string;
 };
+
+type QueenTemplate = {
+  id: number;
+  forms: QueenForm[];
+};
+
+type SeasonMode = 'final' | 'evolve';
 
 interface Queen {
   id: number;
@@ -32,49 +40,841 @@ interface Queen {
   status: 'active' | 'eliminated' | 'winner' | 'runner-up';
   confessionals: string[];
   group?: 1 | 2; // For split premiere
-  evolution?: EvolutionData;
-  hasEvolved?: boolean;
+  evolutionLine?: QueenForm[];
+  evolutionStage?: number;
 }
 
-const QUEEN_POOL: Omit<Queen, 'trackRecord' | 'status' | 'confessionals'>[] = [
-  { id: 1, dexId: 10051, name: "Gardevoir O'Hara", originalName: 'Gardevoir', personality: "The Perfectionist", entranceLine: "I saw the future, and it looks like I'm holding the crown.", stats: { acting: 8, improv: 6, comedy: 5, dance: 9, design: 9, singing: 7, rusical: 8, rumix: 7, makeover: 10, lipsync: 8 } },
-  { id: 2, dexId: 428, name: "Lopunny Bonina Brown", originalName: 'Lopunny', personality: "Lip Sync Assassin", entranceLine: "Hop on board, honey. This ride only goes to the top.", stats: { acting: 5, improv: 4, comedy: 6, dance: 10, design: 7, singing: 4, rusical: 9, rumix: 9, makeover: 6, lipsync: 10 } },
-  { id: 3, dexId: 763, name: "Tsareena Versace", originalName: 'Tsareena', personality: "Fashion Queen", entranceLine: "Bow down. Royalty has arrived.", stats: { acting: 4, improv: 3, comedy: 4, dance: 8, design: 10, singing: 5, rusical: 7, rumix: 8, makeover: 9, lipsync: 7 } },
-  { id: 4, dexId: 730, name: "Primarina Grande", originalName: 'Primarina', personality: "Broadway Diva", entranceLine: "Listen closely, that's the sound of a winner.", stats: { acting: 7, improv: 6, comedy: 5, dance: 6, design: 6, singing: 10, rusical: 10, rumix: 8, makeover: 7, lipsync: 8 } },
-  { id: 5, dexId: 124, name: "Jynx Monsoon", originalName: 'Jynx', personality: "Camp Comedy Legend", entranceLine: "Did someone order a frosty treat with extra spice?", stats: { acting: 10, improv: 10, comedy: 10, dance: 5, design: 4, singing: 9, rusical: 9, rumix: 5, makeover: 3, lipsync: 9 } },
-  { id: 6, dexId: 758, name: "Salazzle Visage", originalName: 'Salazzle', personality: "The Villain", entranceLine: "I didn't come here to make friends, I came to make headlines.", stats: { acting: 9, improv: 8, comedy: 7, dance: 7, design: 5, singing: 6, rusical: 7, rumix: 8, makeover: 5, lipsync: 9 } },
-  { id: 7, dexId: 350, name: "Milotic Colby", originalName: 'Milotic', personality: "Pageant Queen", entranceLine: "Beauty fades, but dumb is forever. Luckily, I'm just beautiful.", stats: { acting: 5, improv: 4, comedy: 3, dance: 6, design: 10, singing: 6, rusical: 6, rumix: 6, makeover: 10, lipsync: 7 } },
-  { id: 8, dexId: 576, name: "Gothitelle Delano", originalName: 'Gothitelle', personality: "Moody Alt-Girl", entranceLine: "It's not a phase, mom. It's a competition.", stats: { acting: 8, improv: 7, comedy: 8, dance: 4, design: 8, singing: 5, rusical: 6, rumix: 5, makeover: 7, lipsync: 7 } },
-  { id: 9, dexId: 858, name: "Hatterene Oddly", originalName: 'Hatterene', personality: "Silent but Deadly", entranceLine: "...", stats: { acting: 6, improv: 5, comedy: 4, dance: 3, design: 10, singing: 4, rusical: 5, rumix: 4, makeover: 9, lipsync: 6 } },
-  { id: 10, dexId: 478, name: "Froslass Davenport", originalName: 'Froslass', personality: "Ice Queen", entranceLine: "Hope you packed a coat, it's about to get chilly at the top.", stats: { acting: 7, improv: 6, comedy: 5, dance: 8, design: 9, singing: 6, rusical: 7, rumix: 7, makeover: 8, lipsync: 8 } },
-  { id: 11, dexId: 655, name: "Delphox Mattel", originalName: 'Delphox', personality: "Comedy Witch", entranceLine: "Abracadabra, bitches!", stats: { acting: 9, improv: 9, comedy: 9, dance: 6, design: 7, singing: 7, rusical: 8, rumix: 6, makeover: 6, lipsync: 7 } },
-  { id: 12, dexId: 31, name: "Nidoqueen Latifah", originalName: 'Nidoqueen', personality: "The Mother", entranceLine: "Mama's home, and she brought cookies... and whoop-ass.", stats: { acting: 8, improv: 8, comedy: 7, dance: 7, design: 6, singing: 8, rusical: 8, rumix: 9, makeover: 5, lipsync: 9 } },
-  { id: 13, dexId: 549, name: "Lilligant Edwards", originalName: 'Lilligant', personality: "Southern Belle", entranceLine: "Well bless your heart, aren't you all just precious second places.", stats: { acting: 6, improv: 5, comedy: 4, dance: 9, design: 8, singing: 5, rusical: 7, rumix: 7, makeover: 8, lipsync: 8 } },
-  { id: 14, dexId: 416, name: "Vespiquen Benet", originalName: 'Vespiquen', personality: "The Ruler", entranceLine: "The hive has spoken. I am the queen.", stats: { acting: 7, improv: 6, comedy: 5, dance: 6, design: 10, singing: 4, rusical: 6, rumix: 6, makeover: 9, lipsync: 6 } },
-  // New Queens
-  { id: 15, dexId: 671, name: "Florges Welch", originalName: 'Florges', personality: "Indie Vocalist", entranceLine: "I'm here to plant a seed and watch you all wither.", stats: { acting: 6, improv: 5, comedy: 4, dance: 5, design: 10, singing: 9, rusical: 8, rumix: 6, makeover: 9, lipsync: 7 } },
-  { id: 16, dexId: 795, name: "Pheromosa Evangelista", originalName: 'Pheromosa', personality: "Supermodel", entranceLine: "Don't hate me because I'm beautiful. Hate me because I'm gonna win.", stats: { acting: 3, improv: 2, comedy: 2, dance: 10, design: 8, singing: 1, rusical: 5, rumix: 8, makeover: 7, lipsync: 9 } },
-  { id: 17, dexId: 407, name: "Roserade Valentine", originalName: 'Roserade', personality: "Romantic Lead", entranceLine: "Every rose has its thorns, and mine are poisoned.", stats: { acting: 9, improv: 7, comedy: 6, dance: 8, design: 7, singing: 5, rusical: 8, rumix: 6, makeover: 6, lipsync: 8 } },
-  { id: 18, dexId: 719, name: "Diancie Sparkles", originalName: 'Diancie', personality: "Spoiled Princess", entranceLine: "Daddy said if I don't win, he's buying the network.", stats: { acting: 5, improv: 4, comedy: 3, dance: 6, design: 10, singing: 8, rusical: 7, rumix: 5, makeover: 8, lipsync: 6 } },
-  { id: 19, dexId: 801, name: "Magearna Del Rio", originalName: 'Magearna', personality: "Insult Comic", entranceLine: "Beep boop. You're all trash.", stats: { acting: 7, improv: 9, comedy: 10, dance: 4, design: 8, singing: 6, rusical: 7, rumix: 4, makeover: 5, lipsync: 5 } },
-  { id: 20, dexId: 648, name: "Meloetta Armstrong", originalName: 'Meloetta', personality: "Theatre Kid", entranceLine: "*High note sustaining for 20 seconds*", stats: { acting: 8, improv: 7, comedy: 6, dance: 9, design: 5, singing: 10, rusical: 10, rumix: 8, makeover: 4, lipsync: 8 } },
-  { id: 21, dexId: 182, name: "Bellossom DuPre", originalName: 'Bellossom', personality: "Dancing Diva", entranceLine: "Aloha, bitches!", stats: { acting: 4, improv: 5, comedy: 6, dance: 10, design: 6, singing: 4, rusical: 8, rumix: 9, makeover: 5, lipsync: 9 } },
-  { id: 22, dexId: 368, name: "Gorebyss Andrews", originalName: 'Gorebyss', personality: "Fishy Queen", entranceLine: "I'm wet. Are you?", stats: { acting: 5, improv: 4, comedy: 3, dance: 6, design: 8, singing: 5, rusical: 6, rumix: 6, makeover: 9, lipsync: 7 } },
-  { id: 23, dexId: 754, name: "Lurantis Michaels", originalName: 'Lurantis', personality: "Professional", entranceLine: "I didn't come to play, I came to slay.", stats: { acting: 7, improv: 6, comedy: 5, dance: 9, design: 8, singing: 5, rusical: 7, rumix: 8, makeover: 7, lipsync: 9 } },
-  { id: 24, dexId: 542, name: "Leavanny Vuitton", originalName: 'Leavanny', personality: "Seamstress", entranceLine: "I hope you girls are ready to be schooled in fashion.", stats: { acting: 4, improv: 3, comedy: 3, dance: 5, design: 10, singing: 4, rusical: 5, rumix: 4, makeover: 10, lipsync: 5 } },
-  { id: 25, dexId: 700, name: "Sylveon Royale", originalName: 'Sylveon', personality: "Pastel Princess", entranceLine: "Sweet looks, sharper tongue.", stats: { acting: 7, improv: 6, comedy: 6, dance: 7, design: 9, singing: 6, rusical: 7, rumix: 8, makeover: 8, lipsync: 9 } },
-  { id: 26, dexId: 581, name: "Swanna Fontaine", originalName: 'Swanna', personality: "Glamazon", entranceLine: "From the runway to the runway, I never leave.", stats: { acting: 6, improv: 5, comedy: 4, dance: 9, design: 8, singing: 7, rusical: 8, rumix: 7, makeover: 6, lipsync: 8 } },
-  { id: 27, dexId: 830, name: "Eldegoss Dior", originalName: 'Eldegoss', personality: "Earthy Icon", entranceLine: "I'm eco-friendly and ego-unfriendly.", stats: { acting: 8, improv: 7, comedy: 6, dance: 5, design: 9, singing: 8, rusical: 7, rumix: 6, makeover: 9, lipsync: 6 } },
-  { id: 28, dexId: 308, name: "Medicham Michaels", originalName: 'Medicham', personality: "Zen Assassin", entranceLine: "Namaste? Nah, I'm here to slay.", stats: { acting: 6, improv: 7, comedy: 5, dance: 10, design: 6, singing: 5, rusical: 8, rumix: 9, makeover: 6, lipsync: 9 } },
-  { id: 29, dexId: 350, name: "Feebas Fabulosa", originalName: 'Feebas', personality: "Glow-Up Queen", entranceLine: "From drab to FAB, watch the evolution.", stats: { acting: 5, improv: 6, comedy: 7, dance: 5, design: 7, singing: 6, rusical: 6, rumix: 7, makeover: 8, lipsync: 7 } },
-  { id: 30, dexId: 869, name: "Alcremie Ganache", originalName: 'Alcremie', personality: "Dessert Diva", entranceLine: "I'm the sugar rush that'll rot your chances.", stats: { acting: 6, improv: 6, comedy: 7, dance: 5, design: 9, singing: 8, rusical: 7, rumix: 6, makeover: 9, lipsync: 7 } },
-  { id: 31, dexId: 682, name: "Spritzee Sauvage", originalName: 'Spritzee', personality: "Perfume Priestess", entranceLine: "My scent alone will send you spinning.", stats: { acting: 6, improv: 6, comedy: 5, dance: 5, design: 8, singing: 8, rusical: 7, rumix: 6, makeover: 7, lipsync: 6 }, evolution: { name: "Aromatisse Sauvage", dexId: 683, stats: { acting: 8, improv: 7, comedy: 6, dance: 7, design: 9, singing: 9, rusical: 9, rumix: 7, makeover: 9, lipsync: 7 }, personality: "Opulent High Priestess", entranceLine: "Consider yourselves blessed by the glamour gods." } },
-  { id: 32, dexId: 762, name: "Steenee St. James", originalName: 'Steenee', personality: "Sugar-Coated Schemer", entranceLine: "I'm cute, I'm sweet, and I'm plotting your demise.", stats: { acting: 5, improv: 5, comedy: 6, dance: 7, design: 8, singing: 5, rusical: 6, rumix: 7, makeover: 7, lipsync: 8 }, evolution: { name: "Tsareena St. James", dexId: 763, stats: { acting: 7, improv: 7, comedy: 7, dance: 10, design: 10, singing: 6, rusical: 8, rumix: 9, makeover: 9, lipsync: 9 }, personality: "Dominant Diva", entranceLine: "Kneel, peasants. The empress has bloomed." } },
-  { id: 33, dexId: 872, name: "Snom Flurriosa", originalName: 'Snom', personality: "Icy Baby Doll", entranceLine: "Tiny, frosty, and ready to frost you out.", stats: { acting: 4, improv: 4, comedy: 6, dance: 5, design: 8, singing: 5, rusical: 5, rumix: 6, makeover: 8, lipsync: 6 }, evolution: { name: "Frosmoth Flurriosa", dexId: 873, stats: { acting: 6, improv: 6, comedy: 7, dance: 8, design: 10, singing: 7, rusical: 7, rumix: 7, makeover: 10, lipsync: 8 }, personality: "Crystal Couture", entranceLine: "Wings out, claws out. Blizzard chic has arrived." } },
-  { id: 34, dexId: 778, name: "Mimikyu Mirage", originalName: 'Mimikyu', personality: "Glamour Ghoul", entranceLine: "Boo! You just got haunted by haute couture.", stats: { acting: 7, improv: 6, comedy: 8, dance: 6, design: 9, singing: 5, rusical: 6, rumix: 6, makeover: 8, lipsync: 8 } },
-  { id: 35, dexId: 196, name: "Espeon Soleil", originalName: 'Espeon', personality: "Psychic It-Girl", entranceLine: "I already saw the finale. Spoiler: I'm in it.", stats: { acting: 8, improv: 8, comedy: 6, dance: 7, design: 8, singing: 7, rusical: 8, rumix: 8, makeover: 7, lipsync: 9 } },
-  { id: 36, dexId: 786, name: "Tapu Lele Extravaganza", originalName: 'Tapu Lele', personality: "Mythic Muse", entranceLine: "Sacred glam energy? Yeah, I invented that.", stats: { acting: 9, improv: 7, comedy: 6, dance: 8, design: 10, singing: 9, rusical: 9, rumix: 8, makeover: 10, lipsync: 8 } },
+const QUEEN_BLUEPRINTS: QueenTemplate[] = [
+  {
+    id: 1,
+    forms: [
+      {
+        name: "Ralts O'Hara",
+        originalName: 'Ralts',
+        dexId: 280,
+        personality: 'Baby Clairvoyant',
+        entranceLine: "I saw this glow-up coming before I hatched.",
+        stats: { acting: 5, improv: 4, comedy: 4, dance: 5, design: 6, singing: 5, rusical: 5, rumix: 4, makeover: 6, lipsync: 5 }
+      },
+      {
+        name: "Kirlia O'Hara",
+        originalName: 'Kirlia',
+        dexId: 281,
+        personality: 'Telekinetic Tease',
+        entranceLine: "Grace, glamour, and a little psychic side-eye.",
+        stats: { acting: 6, improv: 5, comedy: 5, dance: 7, design: 7, singing: 6, rusical: 6, rumix: 6, makeover: 8, lipsync: 6 }
+      },
+      {
+        name: "Gardevoir O'Hara",
+        originalName: 'Gardevoir',
+        dexId: 10051,
+        personality: 'The Perfectionist',
+        entranceLine: "I saw the future, and it looks like I'm holding the crown.",
+        stats: { acting: 8, improv: 6, comedy: 5, dance: 9, design: 9, singing: 7, rusical: 8, rumix: 7, makeover: 10, lipsync: 8 }
+      }
+    ]
+  },
+  {
+    id: 2,
+    forms: [
+      {
+        name: 'Buneary Bonina Brown',
+        originalName: 'Buneary',
+        dexId: 427,
+        personality: 'Jumpstart Diva',
+        entranceLine: "Bun up, babe. This bunny is bouncing to the bank.",
+        stats: { acting: 4, improv: 4, comedy: 5, dance: 7, design: 6, singing: 4, rusical: 6, rumix: 6, makeover: 5, lipsync: 7 }
+      },
+      {
+        name: 'Lopunny Bonina Brown',
+        originalName: 'Lopunny',
+        dexId: 428,
+        personality: 'Lip Sync Assassin',
+        entranceLine: "Hop on board, honey. This ride only goes to the top.",
+        stats: { acting: 5, improv: 4, comedy: 6, dance: 10, design: 7, singing: 4, rusical: 9, rumix: 9, makeover: 6, lipsync: 10 }
+      }
+    ]
+  },
+  {
+    id: 3,
+    forms: [
+      {
+        name: 'Bounsweet Versace',
+        originalName: 'Bounsweet',
+        dexId: 761,
+        personality: 'Juicy Baby Doll',
+        entranceLine: "Sweet? Yes. Innocent? Absolutely not.",
+        stats: { acting: 3, improv: 3, comedy: 5, dance: 6, design: 7, singing: 4, rusical: 5, rumix: 5, makeover: 6, lipsync: 6 }
+      },
+      {
+        name: 'Steenee Versace',
+        originalName: 'Steenee',
+        dexId: 762,
+        personality: 'Sugar-Coated Schemer',
+        entranceLine: "I'm cute, I'm sweet, and I'm plotting your demise.",
+        stats: { acting: 5, improv: 5, comedy: 6, dance: 7, design: 8, singing: 5, rusical: 6, rumix: 7, makeover: 7, lipsync: 8 }
+      },
+      {
+        name: 'Tsareena Versace',
+        originalName: 'Tsareena',
+        dexId: 763,
+        personality: 'Fashion Queen',
+        entranceLine: 'Bow down. Royalty has arrived.',
+        stats: { acting: 4, improv: 3, comedy: 4, dance: 8, design: 10, singing: 5, rusical: 7, rumix: 8, makeover: 9, lipsync: 7 }
+      }
+    ]
+  },
+  {
+    id: 4,
+    forms: [
+      {
+        name: 'Popplio Grande',
+        originalName: 'Popplio',
+        dexId: 728,
+        personality: 'Seafoam Starlet',
+        entranceLine: "It's bubbles, it's glitter, it's Popplio perfection!",
+        stats: { acting: 5, improv: 5, comedy: 5, dance: 5, design: 5, singing: 7, rusical: 7, rumix: 6, makeover: 5, lipsync: 6 }
+      },
+      {
+        name: 'Brionne Grande',
+        originalName: 'Brionne',
+        dexId: 729,
+        personality: 'Splashy Showgirl',
+        entranceLine: "Cue the key change, darling. I'm evolving mid-chorus.",
+        stats: { acting: 6, improv: 5, comedy: 5, dance: 6, design: 6, singing: 9, rusical: 9, rumix: 7, makeover: 6, lipsync: 7 }
+      },
+      {
+        name: 'Primarina Grande',
+        originalName: 'Primarina',
+        dexId: 730,
+        personality: 'Broadway Diva',
+        entranceLine: "Listen closely, that's the sound of a winner.",
+        stats: { acting: 7, improv: 6, comedy: 5, dance: 6, design: 6, singing: 10, rusical: 10, rumix: 8, makeover: 7, lipsync: 8 }
+      }
+    ]
+  },
+  {
+    id: 5,
+    forms: [
+      {
+        name: 'Smoochum Monsoon',
+        originalName: 'Smoochum',
+        dexId: 238,
+        personality: 'Frosted Baby Brat',
+        entranceLine: "Pucker up, losers. The baby just stole your spotlight.",
+        stats: { acting: 6, improv: 6, comedy: 6, dance: 4, design: 3, singing: 7, rusical: 7, rumix: 4, makeover: 2, lipsync: 6 }
+      },
+      {
+        name: 'Jynx Monsoon',
+        originalName: 'Jynx',
+        dexId: 124,
+        personality: 'Camp Comedy Legend',
+        entranceLine: "Did someone order a frosty treat with extra spice?",
+        stats: { acting: 10, improv: 10, comedy: 10, dance: 5, design: 4, singing: 9, rusical: 9, rumix: 5, makeover: 3, lipsync: 9 }
+      }
+    ]
+  },
+  {
+    id: 6,
+    forms: [
+      {
+        name: 'Salandit Visage',
+        originalName: 'Salandit',
+        dexId: 757,
+        personality: 'Toxic Tease',
+        entranceLine: 'Poison kisses only, darling.',
+        stats: { acting: 6, improv: 5, comedy: 5, dance: 6, design: 4, singing: 4, rusical: 5, rumix: 6, makeover: 4, lipsync: 7 }
+      },
+      {
+        name: 'Salazzle Visage',
+        originalName: 'Salazzle',
+        dexId: 758,
+        personality: 'The Villain',
+        entranceLine: "I didn't come here to make friends, I came to make headlines.",
+        stats: { acting: 9, improv: 8, comedy: 7, dance: 7, design: 5, singing: 6, rusical: 7, rumix: 8, makeover: 5, lipsync: 9 }
+      }
+    ]
+  },
+  {
+    id: 7,
+    forms: [
+      {
+        name: 'Feebas Colby',
+        originalName: 'Feebas',
+        dexId: 349,
+        personality: 'Underdog Dreamer',
+        entranceLine: "I'm the makeover episode waiting to happen.",
+        stats: { acting: 4, improv: 4, comedy: 5, dance: 5, design: 5, singing: 5, rusical: 5, rumix: 5, makeover: 6, lipsync: 6 }
+      },
+      {
+        name: 'Milotic Colby',
+        originalName: 'Milotic',
+        dexId: 350,
+        personality: 'Pageant Queen',
+        entranceLine: "Beauty fades, but dumb is forever. Luckily, I'm just beautiful.",
+        stats: { acting: 5, improv: 4, comedy: 3, dance: 6, design: 10, singing: 6, rusical: 6, rumix: 6, makeover: 10, lipsync: 7 }
+      }
+    ]
+  },
+  {
+    id: 8,
+    forms: [
+      {
+        name: 'Gothita Delano',
+        originalName: 'Gothita',
+        dexId: 574,
+        personality: 'Baby Goth Icon',
+        entranceLine: "I'm baby, I'm emo, and I'm booked.",
+        stats: { acting: 6, improv: 5, comedy: 6, dance: 3, design: 6, singing: 4, rusical: 5, rumix: 4, makeover: 5, lipsync: 5 }
+      },
+      {
+        name: 'Gothorita Delano',
+        originalName: 'Gothorita',
+        dexId: 575,
+        personality: 'Teenage Terror',
+        entranceLine: "I don't brood, I book gigs.",
+        stats: { acting: 7, improv: 6, comedy: 7, dance: 4, design: 7, singing: 4, rusical: 5, rumix: 5, makeover: 6, lipsync: 6 }
+      },
+      {
+        name: 'Gothitelle Delano',
+        originalName: 'Gothitelle',
+        dexId: 576,
+        personality: 'Moody Alt-Girl',
+        entranceLine: "It's not a phase, mom. It's a competition.",
+        stats: { acting: 8, improv: 7, comedy: 8, dance: 4, design: 8, singing: 5, rusical: 6, rumix: 5, makeover: 7, lipsync: 7 }
+      }
+    ]
+  },
+  {
+    id: 9,
+    forms: [
+      {
+        name: 'Hatenna Oddly',
+        originalName: 'Hatenna',
+        dexId: 856,
+        personality: 'Quiet Storm',
+        entranceLine: "Shh... the psychic slay is loading.",
+        stats: { acting: 4, improv: 4, comedy: 3, dance: 2, design: 7, singing: 3, rusical: 4, rumix: 3, makeover: 6, lipsync: 4 }
+      },
+      {
+        name: 'Hattrem Oddly',
+        originalName: 'Hattrem',
+        dexId: 857,
+        personality: 'Pastel Menace',
+        entranceLine: "Speak softly and carry a huge wig.",
+        stats: { acting: 5, improv: 5, comedy: 4, dance: 3, design: 8, singing: 4, rusical: 4, rumix: 4, makeover: 7, lipsync: 5 }
+      },
+      {
+        name: 'Hatterene Oddly',
+        originalName: 'Hatterene',
+        dexId: 858,
+        personality: 'Silent but Deadly',
+        entranceLine: '...',
+        stats: { acting: 6, improv: 5, comedy: 4, dance: 3, design: 10, singing: 4, rusical: 5, rumix: 4, makeover: 9, lipsync: 6 }
+      }
+    ]
+  },
+  {
+    id: 10,
+    forms: [
+      {
+        name: 'Snorunt Davenport',
+        originalName: 'Snorunt',
+        dexId: 361,
+        personality: 'Chilly Rascal',
+        entranceLine: "Bundle up, I'm bringing a cold front of charisma.",
+        stats: { acting: 5, improv: 5, comedy: 4, dance: 6, design: 6, singing: 4, rusical: 5, rumix: 5, makeover: 6, lipsync: 6 }
+      },
+      {
+        name: 'Froslass Davenport',
+        originalName: 'Froslass',
+        dexId: 478,
+        personality: 'Ice Queen',
+        entranceLine: "Hope you packed a coat, it's about to get chilly at the top.",
+        stats: { acting: 7, improv: 6, comedy: 5, dance: 8, design: 9, singing: 6, rusical: 7, rumix: 7, makeover: 8, lipsync: 8 }
+      }
+    ]
+  },
+  {
+    id: 11,
+    forms: [
+      {
+        name: 'Fennekin Mattel',
+        originalName: 'Fennekin',
+        dexId: 653,
+        personality: 'Foxfire Freshman',
+        entranceLine: 'Someone called for a tiny torch of talent?',
+        stats: { acting: 6, improv: 6, comedy: 6, dance: 4, design: 5, singing: 5, rusical: 6, rumix: 4, makeover: 4, lipsync: 5 }
+      },
+      {
+        name: 'Braixen Mattel',
+        originalName: 'Braixen',
+        dexId: 654,
+        personality: 'Wand Waver',
+        entranceLine: "Glitter? Check. Wand? Check. Your wigs? Gone.",
+        stats: { acting: 7, improv: 7, comedy: 7, dance: 5, design: 6, singing: 6, rusical: 7, rumix: 5, makeover: 5, lipsync: 6 }
+      },
+      {
+        name: 'Delphox Mattel',
+        originalName: 'Delphox',
+        dexId: 655,
+        personality: 'Comedy Witch',
+        entranceLine: "Abracadabra, bitches!",
+        stats: { acting: 9, improv: 9, comedy: 9, dance: 6, design: 7, singing: 7, rusical: 8, rumix: 6, makeover: 6, lipsync: 7 }
+      }
+    ]
+  },
+  {
+    id: 12,
+    forms: [
+      {
+        name: 'Nidoran Momma',
+        originalName: 'Nidoran♀',
+        dexId: 29,
+        personality: 'Spiky Sweetheart',
+        entranceLine: "Mama's little needle is ready to prick egos.",
+        stats: { acting: 5, improv: 5, comedy: 5, dance: 5, design: 4, singing: 6, rusical: 6, rumix: 7, makeover: 4, lipsync: 7 }
+      },
+      {
+        name: 'Nidorina Momma',
+        originalName: 'Nidorina',
+        dexId: 30,
+        personality: 'Protective Matriarch',
+        entranceLine: "I'm half den mother, half demolition crew.",
+        stats: { acting: 6, improv: 6, comedy: 6, dance: 6, design: 5, singing: 7, rusical: 7, rumix: 8, makeover: 4, lipsync: 8 }
+      },
+      {
+        name: 'Nidoqueen Latifah',
+        originalName: 'Nidoqueen',
+        dexId: 31,
+        personality: 'The Mother',
+        entranceLine: "Mama's home, and she brought cookies... and whoop-ass.",
+        stats: { acting: 8, improv: 8, comedy: 7, dance: 7, design: 6, singing: 8, rusical: 8, rumix: 9, makeover: 5, lipsync: 9 }
+      }
+    ]
+  },
+  {
+    id: 13,
+    forms: [
+      {
+        name: 'Petilil Edwards',
+        originalName: 'Petilil',
+        dexId: 548,
+        personality: 'Tea Garden Pixie',
+        entranceLine: "One sip of me and you'll spill all your secrets.",
+        stats: { acting: 4, improv: 4, comedy: 3, dance: 7, design: 6, singing: 4, rusical: 5, rumix: 5, makeover: 6, lipsync: 6 }
+      },
+      {
+        name: 'Lilligant Edwards',
+        originalName: 'Lilligant',
+        dexId: 549,
+        personality: 'Southern Belle',
+        entranceLine: "Well bless your heart, aren't you all just precious second places.",
+        stats: { acting: 6, improv: 5, comedy: 4, dance: 9, design: 8, singing: 5, rusical: 7, rumix: 7, makeover: 8, lipsync: 8 }
+      }
+    ]
+  },
+  {
+    id: 14,
+    forms: [
+      {
+        name: 'Combee Benet',
+        originalName: 'Combee',
+        dexId: 415,
+        personality: 'Hive Hype Girl',
+        entranceLine: "Three faces, one crown, zero apologies.",
+        stats: { acting: 5, improv: 4, comedy: 4, dance: 5, design: 7, singing: 3, rusical: 4, rumix: 4, makeover: 6, lipsync: 4 }
+      },
+      {
+        name: 'Vespiquen Benet',
+        originalName: 'Vespiquen',
+        dexId: 416,
+        personality: 'The Ruler',
+        entranceLine: "The hive has spoken. I am the queen.",
+        stats: { acting: 7, improv: 6, comedy: 5, dance: 6, design: 10, singing: 4, rusical: 6, rumix: 6, makeover: 9, lipsync: 6 }
+      }
+    ]
+  },
+  {
+    id: 15,
+    forms: [
+      {
+        name: 'Flabebe Welch',
+        originalName: 'Flabebe',
+        dexId: 669,
+        personality: 'Tiny Tenor',
+        entranceLine: 'Small package, massive vibrato.',
+        stats: { acting: 4, improv: 4, comedy: 3, dance: 4, design: 7, singing: 7, rusical: 6, rumix: 4, makeover: 7, lipsync: 5 }
+      },
+      {
+        name: 'Floette Welch',
+        originalName: 'Floette',
+        dexId: 670,
+        personality: 'Garden Torch Singer',
+        entranceLine: "I'm blooming and belting at the same time.",
+        stats: { acting: 5, improv: 4, comedy: 4, dance: 4, design: 9, singing: 8, rusical: 7, rumix: 5, makeover: 8, lipsync: 6 }
+      },
+      {
+        name: 'Florges Welch',
+        originalName: 'Florges',
+        dexId: 671,
+        personality: 'Indie Vocalist',
+        entranceLine: "I'm here to plant a seed and watch you all wither.",
+        stats: { acting: 6, improv: 5, comedy: 4, dance: 5, design: 10, singing: 9, rusical: 8, rumix: 6, makeover: 9, lipsync: 7 }
+      }
+    ]
+  },
+  {
+    id: 16,
+    forms: [
+      {
+        name: 'Pheromosa Evangelista',
+        originalName: 'Pheromosa',
+        dexId: 795,
+        personality: 'Supermodel',
+        entranceLine: "Don't hate me because I'm beautiful. Hate me because I'm gonna win.",
+        stats: { acting: 3, improv: 2, comedy: 2, dance: 10, design: 8, singing: 1, rusical: 5, rumix: 8, makeover: 7, lipsync: 9 }
+      }
+    ]
+  },
+  {
+    id: 17,
+    forms: [
+      {
+        name: 'Budew Valentine',
+        originalName: 'Budew',
+        dexId: 406,
+        personality: 'Petal Prodigy',
+        entranceLine: 'Prickly, precious, and ready to perform.',
+        stats: { acting: 5, improv: 4, comedy: 4, dance: 5, design: 5, singing: 4, rusical: 5, rumix: 4, makeover: 5, lipsync: 5 }
+      },
+      {
+        name: 'Roselia Valentine',
+        originalName: 'Roselia',
+        dexId: 315,
+        personality: 'Dual-Wield Diva',
+        entranceLine: 'Two roses, twice the read.',
+        stats: { acting: 7, improv: 6, comedy: 5, dance: 6, design: 6, singing: 4, rusical: 6, rumix: 5, makeover: 6, lipsync: 7 }
+      },
+      {
+        name: 'Roserade Valentine',
+        originalName: 'Roserade',
+        dexId: 407,
+        personality: 'Romantic Lead',
+        entranceLine: "Every rose has its thorns, and mine are poisoned.",
+        stats: { acting: 9, improv: 7, comedy: 6, dance: 8, design: 7, singing: 5, rusical: 8, rumix: 6, makeover: 6, lipsync: 8 }
+      }
+    ]
+  },
+  {
+    id: 18,
+    forms: [
+      {
+        name: 'Diancie Sparkles',
+        originalName: 'Diancie',
+        dexId: 719,
+        personality: 'Spoiled Princess',
+        entranceLine: "Daddy said if I don't win, he's buying the network.",
+        stats: { acting: 5, improv: 4, comedy: 3, dance: 6, design: 10, singing: 8, rusical: 7, rumix: 5, makeover: 8, lipsync: 6 }
+      }
+    ]
+  },
+  {
+    id: 19,
+    forms: [
+      {
+        name: 'Magearna Del Rio',
+        originalName: 'Magearna',
+        dexId: 801,
+        personality: 'Insult Comic',
+        entranceLine: "Beep boop. You're all trash.",
+        stats: { acting: 7, improv: 9, comedy: 10, dance: 4, design: 8, singing: 6, rusical: 7, rumix: 4, makeover: 5, lipsync: 5 }
+      }
+    ]
+  },
+  {
+    id: 20,
+    forms: [
+      {
+        name: 'Meloetta Armstrong',
+        originalName: 'Meloetta',
+        dexId: 648,
+        personality: 'Theatre Kid',
+        entranceLine: '*High note sustaining for 20 seconds*',
+        stats: { acting: 8, improv: 7, comedy: 6, dance: 9, design: 5, singing: 10, rusical: 10, rumix: 8, makeover: 4, lipsync: 8 }
+      }
+    ]
+  },
+  {
+    id: 21,
+    forms: [
+      {
+        name: 'Oddish DuPre',
+        originalName: 'Oddish',
+        dexId: 43,
+        personality: 'Night Garden Gremlin',
+        entranceLine: "I'm fertilizer for your flop era.",
+        stats: { acting: 3, improv: 4, comedy: 5, dance: 6, design: 4, singing: 3, rusical: 5, rumix: 6, makeover: 4, lipsync: 6 }
+      },
+      {
+        name: 'Gloom DuPre',
+        originalName: 'Gloom',
+        dexId: 44,
+        personality: 'Funky Fresh',
+        entranceLine: "I smell success... or maybe that's just me.",
+        stats: { acting: 4, improv: 4, comedy: 6, dance: 7, design: 5, singing: 4, rusical: 6, rumix: 7, makeover: 4, lipsync: 7 }
+      },
+      {
+        name: 'Bellossom DuPre',
+        originalName: 'Bellossom',
+        dexId: 182,
+        personality: 'Dancing Diva',
+        entranceLine: 'Aloha, bitches!',
+        stats: { acting: 4, improv: 5, comedy: 6, dance: 10, design: 6, singing: 4, rusical: 8, rumix: 9, makeover: 5, lipsync: 9 }
+      }
+    ]
+  },
+  {
+    id: 22,
+    forms: [
+      {
+        name: 'Clamperl Andrews',
+        originalName: 'Clamperl',
+        dexId: 366,
+        personality: 'Shellfish Siren',
+        entranceLine: "I'm pearls, I'm petty, I'm here to pop off.",
+        stats: { acting: 4, improv: 3, comedy: 3, dance: 5, design: 6, singing: 4, rusical: 4, rumix: 4, makeover: 7, lipsync: 5 }
+      },
+      {
+        name: 'Gorebyss Andrews',
+        originalName: 'Gorebyss',
+        dexId: 368,
+        personality: 'Fishy Queen',
+        entranceLine: "I'm wet. Are you?",
+        stats: { acting: 5, improv: 4, comedy: 3, dance: 6, design: 8, singing: 5, rusical: 6, rumix: 6, makeover: 9, lipsync: 7 }
+      }
+    ]
+  },
+  {
+    id: 23,
+    forms: [
+      {
+        name: 'Fomantis Michaels',
+        originalName: 'Fomantis',
+        dexId: 753,
+        personality: 'Photosyntheslay',
+        entranceLine: "Sun up or sun down, I'm booked and blessed.",
+        stats: { acting: 5, improv: 4, comedy: 4, dance: 6, design: 6, singing: 4, rusical: 5, rumix: 5, makeover: 5, lipsync: 6 }
+      },
+      {
+        name: 'Lurantis Michaels',
+        originalName: 'Lurantis',
+        dexId: 754,
+        personality: 'Professional',
+        entranceLine: "I didn't come to play, I came to slay.",
+        stats: { acting: 7, improv: 6, comedy: 5, dance: 9, design: 8, singing: 5, rusical: 7, rumix: 8, makeover: 7, lipsync: 9 }
+      }
+    ]
+  },
+  {
+    id: 24,
+    forms: [
+      {
+        name: 'Sewaddle Vuitton',
+        originalName: 'Sewaddle',
+        dexId: 540,
+        personality: 'Thread Count Terror',
+        entranceLine: "I'm ready to hem up the competition.",
+        stats: { acting: 3, improv: 3, comedy: 3, dance: 4, design: 7, singing: 3, rusical: 4, rumix: 3, makeover: 7, lipsync: 4 }
+      },
+      {
+        name: 'Swadloon Vuitton',
+        originalName: 'Swadloon',
+        dexId: 541,
+        personality: 'Cocooned Critic',
+        entranceLine: "Wake me when it's time to win.",
+        stats: { acting: 4, improv: 3, comedy: 3, dance: 4, design: 8, singing: 3, rusical: 4, rumix: 4, makeover: 8, lipsync: 4 }
+      },
+      {
+        name: 'Leavanny Vuitton',
+        originalName: 'Leavanny',
+        dexId: 542,
+        personality: 'Seamstress',
+        entranceLine: "I hope you girls are ready to be schooled in fashion.",
+        stats: { acting: 4, improv: 3, comedy: 3, dance: 5, design: 10, singing: 4, rusical: 5, rumix: 4, makeover: 10, lipsync: 5 }
+      }
+    ]
+  },
+  {
+    id: 25,
+    forms: [
+      {
+        name: 'Eevee Royale',
+        originalName: 'Eevee',
+        dexId: 133,
+        personality: 'Ribbon Rookie',
+        entranceLine: "I'm cute now, but wait till I unwrap.",
+        stats: { acting: 5, improv: 4, comedy: 5, dance: 5, design: 7, singing: 4, rusical: 5, rumix: 5, makeover: 6, lipsync: 6 }
+      },
+      {
+        name: 'Sylveon Royale',
+        originalName: 'Sylveon',
+        dexId: 700,
+        personality: 'Pastel Princess',
+        entranceLine: 'Sweet looks, sharper tongue.',
+        stats: { acting: 7, improv: 6, comedy: 6, dance: 7, design: 9, singing: 6, rusical: 7, rumix: 8, makeover: 8, lipsync: 9 }
+      }
+    ]
+  },
+  {
+    id: 26,
+    forms: [
+      {
+        name: 'Ducklett Fontaine',
+        originalName: 'Ducklett',
+        dexId: 580,
+        personality: 'Pond Pageant',
+        entranceLine: "Quack the code and give me the crown.",
+        stats: { acting: 4, improv: 4, comedy: 3, dance: 6, design: 5, singing: 5, rusical: 5, rumix: 5, makeover: 4, lipsync: 5 }
+      },
+      {
+        name: 'Swanna Fontaine',
+        originalName: 'Swanna',
+        dexId: 581,
+        personality: 'Glamazon',
+        entranceLine: "From the runway to the runway, I never leave.",
+        stats: { acting: 6, improv: 5, comedy: 4, dance: 9, design: 8, singing: 7, rusical: 8, rumix: 7, makeover: 6, lipsync: 8 }
+      }
+    ]
+  },
+  {
+    id: 27,
+    forms: [
+      {
+        name: 'Gossifleur Dior',
+        originalName: 'Gossifleur',
+        dexId: 829,
+        personality: 'Breezy Muse',
+        entranceLine: "Fresh air and fresher reads.",
+        stats: { acting: 5, improv: 5, comedy: 4, dance: 4, design: 7, singing: 6, rusical: 5, rumix: 4, makeover: 7, lipsync: 4 }
+      },
+      {
+        name: 'Eldegoss Dior',
+        originalName: 'Eldegoss',
+        dexId: 830,
+        personality: 'Earthy Icon',
+        entranceLine: "I'm eco-friendly and ego-unfriendly.",
+        stats: { acting: 8, improv: 7, comedy: 6, dance: 5, design: 9, singing: 8, rusical: 7, rumix: 6, makeover: 9, lipsync: 6 }
+      }
+    ]
+  },
+  {
+    id: 28,
+    forms: [
+      {
+        name: 'Meditite Michaels',
+        originalName: 'Meditite',
+        dexId: 307,
+        personality: 'Balanced Brat',
+        entranceLine: "Inner peace? Never heard of her.",
+        stats: { acting: 5, improv: 6, comedy: 4, dance: 8, design: 5, singing: 4, rusical: 6, rumix: 7, makeover: 5, lipsync: 7 }
+      },
+      {
+        name: 'Medicham Michaels',
+        originalName: 'Medicham',
+        dexId: 308,
+        personality: 'Zen Assassin',
+        entranceLine: "Namaste? Nah, I'm here to slay.",
+        stats: { acting: 6, improv: 7, comedy: 5, dance: 10, design: 6, singing: 5, rusical: 8, rumix: 9, makeover: 6, lipsync: 9 }
+      }
+    ]
+  },
+  {
+    id: 29,
+    forms: [
+      {
+        name: 'Milcery Ganache',
+        originalName: 'Milcery',
+        dexId: 868,
+        personality: 'Whipped Wonder',
+        entranceLine: "Stir me once and I'm already iconic.",
+        stats: { acting: 4, improv: 4, comedy: 5, dance: 4, design: 7, singing: 6, rusical: 5, rumix: 4, makeover: 7, lipsync: 5 }
+      },
+      {
+        name: 'Alcremie Ganache',
+        originalName: 'Alcremie',
+        dexId: 869,
+        personality: 'Dessert Diva',
+        entranceLine: "I'm the sugar rush that'll rot your chances.",
+        stats: { acting: 6, improv: 6, comedy: 7, dance: 5, design: 9, singing: 8, rusical: 7, rumix: 6, makeover: 9, lipsync: 7 }
+      }
+    ]
+  },
+  {
+    id: 30,
+    forms: [
+      {
+        name: 'Spritzee Sauvage',
+        originalName: 'Spritzee',
+        dexId: 682,
+        personality: 'Perfume Priestess',
+        entranceLine: "My scent alone will send you spinning.",
+        stats: { acting: 6, improv: 6, comedy: 5, dance: 5, design: 8, singing: 8, rusical: 7, rumix: 6, makeover: 7, lipsync: 6 }
+      },
+      {
+        name: 'Aromatisse Sauvage',
+        originalName: 'Aromatisse',
+        dexId: 683,
+        personality: 'Opulent High Priestess',
+        entranceLine: "Consider yourselves blessed by the glamour gods.",
+        stats: { acting: 8, improv: 7, comedy: 6, dance: 7, design: 9, singing: 9, rusical: 9, rumix: 7, makeover: 9, lipsync: 7 }
+      }
+    ]
+  },
+  {
+    id: 31,
+    forms: [
+      {
+        name: 'Snom Flurriosa',
+        originalName: 'Snom',
+        dexId: 872,
+        personality: 'Icy Baby Doll',
+        entranceLine: "Tiny, frosty, and ready to frost you out.",
+        stats: { acting: 4, improv: 4, comedy: 6, dance: 5, design: 8, singing: 5, rusical: 5, rumix: 6, makeover: 8, lipsync: 6 }
+      },
+      {
+        name: 'Frosmoth Flurriosa',
+        originalName: 'Frosmoth',
+        dexId: 873,
+        personality: 'Crystal Couture',
+        entranceLine: "Wings out, claws out. Blizzard chic has arrived.",
+        stats: { acting: 6, improv: 6, comedy: 7, dance: 8, design: 10, singing: 7, rusical: 7, rumix: 7, makeover: 10, lipsync: 8 }
+      }
+    ]
+  },
+  {
+    id: 32,
+    forms: [
+      {
+        name: 'Mimikyu Mirage',
+        originalName: 'Mimikyu',
+        dexId: 778,
+        personality: 'Glamour Ghoul',
+        entranceLine: "Boo! You just got haunted by haute couture.",
+        stats: { acting: 7, improv: 6, comedy: 8, dance: 6, design: 9, singing: 5, rusical: 6, rumix: 6, makeover: 8, lipsync: 8 }
+      }
+    ]
+  },
+  {
+    id: 33,
+    forms: [
+      {
+        name: 'Eevee Soleil',
+        originalName: 'Eevee',
+        dexId: 133,
+        personality: 'Sunrise Seer',
+        entranceLine: "Bright eyed, bushy tailed, and booking the gig.",
+        stats: { acting: 5, improv: 5, comedy: 5, dance: 5, design: 6, singing: 5, rusical: 5, rumix: 5, makeover: 6, lipsync: 6 }
+      },
+      {
+        name: 'Espeon Soleil',
+        originalName: 'Espeon',
+        dexId: 196,
+        personality: 'Psychic It-Girl',
+        entranceLine: "I already saw the finale. Spoiler: I'm in it.",
+        stats: { acting: 8, improv: 8, comedy: 6, dance: 7, design: 8, singing: 7, rusical: 8, rumix: 8, makeover: 7, lipsync: 9 }
+      }
+    ]
+  },
+  {
+    id: 34,
+    forms: [
+      {
+        name: 'Tapu Lele Extravaganza',
+        originalName: 'Tapu Lele',
+        dexId: 786,
+        personality: 'Mythic Muse',
+        entranceLine: "Sacred glam energy? Yeah, I invented that.",
+        stats: { acting: 9, improv: 7, comedy: 6, dance: 8, design: 10, singing: 9, rusical: 9, rumix: 8, makeover: 10, lipsync: 8 }
+      }
+    ]
+  }
 ];
+
+const getDisplayForm = (template: QueenTemplate, mode: SeasonMode): QueenForm =>
+  mode === 'evolve' ? template.forms[0] : template.forms[template.forms.length - 1];
+
+const instantiateQueenFromTemplate = (template: QueenTemplate, mode: SeasonMode): Queen => {
+  const clonedForms = template.forms.map(form => ({
+    ...form,
+    stats: { ...form.stats }
+  }));
+  const startingStage = mode === 'evolve' ? 0 : clonedForms.length - 1;
+  const startingForm = clonedForms[startingStage];
+
+  return {
+    id: template.id,
+    dexId: startingForm.dexId,
+    name: startingForm.name,
+    originalName: startingForm.originalName,
+    stats: { ...startingForm.stats },
+    personality: startingForm.personality,
+    entranceLine: startingForm.entranceLine,
+    trackRecord: [],
+    status: 'active',
+    confessionals: [],
+    evolutionLine: clonedForms,
+    evolutionStage: startingStage,
+  };
+};
+
+const evolutionStyles = `
+  .evolution-celebration {
+    position: relative;
+    overflow: hidden;
+  }
+  .evolution-celebration .evolution-glow {
+    position: absolute;
+    inset: -40%;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.35), transparent 70%);
+    filter: blur(18px);
+    animation: shimmerPulse 2.8s infinite;
+    opacity: 0.9;
+  }
+  .evolution-celebration .evolution-sparkle {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 9999px;
+    background: rgba(255,255,255,0.85);
+    box-shadow: 0 0 12px rgba(255,255,255,0.8);
+    animation: floatSparkle 3s ease-in-out infinite;
+  }
+  .evolution-celebration .evolution-sparkle:nth-child(3) {
+    left: 8%;
+    top: 20%;
+    animation-delay: 0.2s;
+  }
+  .evolution-celebration .evolution-sparkle:nth-child(4) {
+    right: 12%;
+    bottom: 18%;
+    animation-delay: 0.8s;
+  }
+  .evolution-celebration .evolution-sparkle:nth-child(5) {
+    left: 48%;
+    top: -6%;
+    animation-delay: 1.4s;
+  }
+  @keyframes shimmerPulse {
+    0%, 100% { transform: scale(0.95); opacity: 0.5; }
+    50% { transform: scale(1.05); opacity: 0.9; }
+  }
+  @keyframes floatSparkle {
+    0% { transform: translateY(0) scale(0.8); opacity: 0.7; }
+    50% { transform: translateY(-14px) scale(1.1); opacity: 1; }
+    100% { transform: translateY(0) scale(0.8); opacity: 0.7; }
+  }
+`;
 
 type Phase = 'SETUP' | 'CAST_SELECTION' | 'ENTRANCES' | 'PROMO' | 'CHALLENGE_SELECTION' | 'CHALLENGE_INTRO' | 'PERFORMANCE' | 'JUDGING' | 'RESULTS' | 'UNTUCKED' | 'LIPSYNC' | 'ELIMINATION' | 'FINALE' | 'SEASON_OVER';
 
@@ -348,6 +1148,7 @@ export default function PokeDragRaceSimulator() {
   const [doubleShantayUsed, setDoubleShantayUsed] = useState(false);
   const [splitPremiere, setSplitPremiere] = useState(false);
   const [competitionFormat, setCompetitionFormat] = useState<'standard' | 'allStars'>('standard');
+  const [seasonMode, setSeasonMode] = useState<SeasonMode>('final');
   const [pendingLegacyElimination, setPendingLegacyElimination] = useState<{ winnerId: number; options: Queen[] } | null>(null);
   const [latestResults, setLatestResults] = useState<Record<number, Placement>>({});
   const [recentEvolution, setRecentEvolution] = useState<{
@@ -373,7 +1174,9 @@ export default function PokeDragRaceSimulator() {
 
   const eliminatedQueens = useMemo(() => cast.filter(q => q.status === 'eliminated'), [cast]);
   const evolvableQueens = useMemo(
-      () => currentEpisodeQueens.filter(q => q.evolution && !q.hasEvolved),
+      () => currentEpisodeQueens.filter(q =>
+          q.evolutionLine && (q.evolutionStage ?? 0) < q.evolutionLine.length - 1
+      ),
       [currentEpisodeQueens]
   );
   const evolvableNames = useMemo(() => evolvableQueens.map(q => q.name), [evolvableQueens]);
@@ -391,6 +1194,7 @@ export default function PokeDragRaceSimulator() {
       setSelectedCastIds([]);
       setSplitPremiere(false);
       setCompetitionFormat('standard');
+      setSeasonMode('final');
       setPendingLegacyElimination(null);
       setUnsavedPlacements({});
       setLatestResults({});
@@ -412,13 +1216,8 @@ export default function PokeDragRaceSimulator() {
           return;
       }
       
-      let newCast = QUEEN_POOL.filter(q => selectedCastIds.includes(q.id)).map(q => ({
-        ...q,
-        trackRecord: [],
-        status: 'active' as const,
-        confessionals: [],
-        hasEvolved: false,
-      }));
+      const selectedBlueprints = QUEEN_BLUEPRINTS.filter(template => selectedCastIds.includes(template.id));
+      let newCast = selectedBlueprints.map(template => instantiateQueenFromTemplate(template, seasonMode));
 
       if (splitPremiere) {
           // Randomly assign groups 1 and 2
@@ -430,10 +1229,15 @@ export default function PokeDragRaceSimulator() {
           }));
       }
 
-      setCast(newCast as Queen[]);
+      setCast(newCast);
       setEpisodeCount(1);
       setPhase('ENTRANCES');
-      setCurrentStoryline(splitPremiere ? "The first group of queens arrives..." : "The workroom is quiet... for now.");
+      const setupLine = splitPremiere
+          ? 'The first group of queens arrives...'
+          : seasonMode === 'evolve'
+              ? 'The workroom is buzzing—fresh forms are ready to evolve!'
+              : 'The werkroom is quiet... for now.';
+      setCurrentStoryline(setupLine);
       setChallengeHistory([]);
       setDoubleShantayUsed(false);
       setPendingLegacyElimination(null);
@@ -635,33 +1439,40 @@ export default function PokeDragRaceSimulator() {
     } | null = null;
 
     setCast(prev => prev.map(q => {
-        if (q.id !== queenId || !q.evolution || q.hasEvolved) {
+        if (q.id !== queenId || !q.evolutionLine) {
             return q;
         }
 
-        const fromName = q.name;
-        const evolved = q.evolution;
+        const currentStage = q.evolutionStage ?? 0;
+        const nextStage = currentStage + 1;
+        if (nextStage >= q.evolutionLine.length) {
+            return q;
+        }
+
+        const fromForm = q.evolutionLine[currentStage];
+        const toForm = q.evolutionLine[nextStage];
         const statBoosts = STAT_CATEGORIES.map(stat => ({
             stat,
-            amount: evolved.stats[stat] - q.stats[stat]
+            amount: toForm.stats[stat] - q.stats[stat]
         })).filter(boost => boost.amount > 0);
 
         evolutionDetails = {
             queenId,
-            fromName,
-            toName: evolved.name,
+            fromName: fromForm.name,
+            toName: toForm.name,
             statBoosts
         };
 
         return {
             ...q,
-            name: evolved.name,
-            dexId: evolved.dexId,
-            stats: evolved.stats,
-            personality: evolved.personality ?? q.personality,
-            entranceLine: evolved.entranceLine ?? q.entranceLine,
-            hasEvolved: true,
-            confessionals: [`Did you clock that glow up? ${fromName} just became ${evolved.name}.`, ...q.confessionals].slice(0, 10)
+            dexId: toForm.dexId,
+            name: toForm.name,
+            originalName: toForm.originalName,
+            stats: { ...toForm.stats },
+            personality: toForm.personality,
+            entranceLine: toForm.entranceLine,
+            evolutionStage: nextStage,
+            confessionals: [`Did you clock that glow up? ${fromForm.name} just became ${toForm.name}.`, ...q.confessionals].slice(0, 10)
         };
     }));
 
@@ -876,16 +1687,28 @@ export default function PokeDragRaceSimulator() {
         {recentEvolution && (() => {
             const evolvedQueen = cast.find(q => q.id === recentEvolution?.queenId);
             if (!evolvedQueen) return null;
+            const remainingEvolutions = evolvedQueen.evolutionLine
+                ? Math.max(0, evolvedQueen.evolutionLine.length - 1 - (evolvedQueen.evolutionStage ?? 0))
+                : 0;
             return (
                 <div className="max-w-4xl mx-auto mb-8">
-                    <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-rose-500 text-white rounded-3xl p-6 shadow-2xl border border-white/40 relative overflow-hidden">
+                    <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-rose-500 text-white rounded-3xl p-6 shadow-2xl border border-white/40 relative overflow-hidden evolution-celebration">
                         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top,_#fff_0%,_transparent_70%)]"></div>
+                        <div className="evolution-glow" />
+                        <div className="evolution-sparkle" />
+                        <div className="evolution-sparkle" />
+                        <div className="evolution-sparkle" />
                         <div className="flex flex-col md:flex-row items-center md:items-start md:space-x-6 relative z-10">
                             <img src={getQueenImg(evolvedQueen.dexId)} className="w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-white/70 bg-white/30 shadow-lg" />
                             <div className="flex-1 text-center md:text-left mt-4 md:mt-0">
                                 <h3 className="text-sm uppercase tracking-[0.4em] text-white/80">Evolution Boost</h3>
                                 <p className="text-2xl font-extrabold mt-2">{recentEvolution.fromName} ➜ {recentEvolution.toName}</p>
                                 <p className="text-sm text-white/80 mt-2 max-w-xl">New glamour unlocked! These boosted stats will shake up the competition.</p>
+                                <p className="text-xs text-white/70 mt-1">
+                                    {remainingEvolutions > 0
+                                        ? `${remainingEvolutions} evolution${remainingEvolutions > 1 ? 's' : ''} still on the table.`
+                                        : 'Fully evolved and feeling legendary!'}
+                                </p>
                                 {recentEvolution.statBoosts.length > 0 && (
                                     <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-4">
                                         {recentEvolution.statBoosts.map(boost => (
@@ -932,7 +1755,24 @@ export default function PokeDragRaceSimulator() {
                             All Stars Legacy
                         </button>
                     </div>
-                    <p className="text-xs uppercase tracking-widest text-gray-500">{competitionFormat === 'allStars' ? 'Top two lip sync for their legacy each week.' : 'Bottom two lip sync for their lives.'}</p>
+                    <div className="flex items-center space-x-3 bg-white p-2 rounded-full shadow-inner">
+                        <button
+                            onClick={() => setSeasonMode('final')}
+                            className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${seasonMode === 'final' ? 'bg-rose-500 text-white shadow-md' : 'text-rose-500 hover:bg-rose-50'}`}
+                        >
+                            Final Form Season
+                        </button>
+                        <button
+                            onClick={() => setSeasonMode('evolve')}
+                            className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${seasonMode === 'evolve' ? 'bg-emerald-500 text-white shadow-md' : 'text-emerald-500 hover:bg-emerald-50'}`}
+                        >
+                            Evolution Journey
+                        </button>
+                    </div>
+                    <div className="text-xs uppercase tracking-widest text-gray-500 space-y-1">
+                        <p>{competitionFormat === 'allStars' ? 'Top two lip sync for their legacy each week.' : 'Bottom two lip sync for their lives.'}</p>
+                        <p>{seasonMode === 'evolve' ? 'Queens debut in their first forms and can evolve up to their ultimate stage.' : 'Every queen enters at full power—no evolutions remaining.'}</p>
+                    </div>
                      <label className={`flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow cursor-pointer ${competitionFormat === 'allStars' ? 'opacity-40 cursor-not-allowed' : ''}`}>
                         <input type="checkbox" checked={splitPremiere} disabled={competitionFormat === 'allStars'} onChange={e => setSplitPremiere(e.target.checked)} className="w-5 h-5 text-pink-600" />
                         <span className="font-bold text-pink-800">Split Premiere (2 Non-Elim Episodes)</span>
@@ -943,17 +1783,25 @@ export default function PokeDragRaceSimulator() {
                     </button>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {QUEEN_POOL.map(q => (
-                        <div key={q.id} onClick={() => toggleQueenSelection(q.id)} 
-                             className={`cursor-pointer p-3 rounded-xl border-2 transition-all relative ${selectedCastIds.includes(q.id) ? 'border-pink-500 bg-pink-50 shadow-md transform scale-105' : 'border-gray-200 bg-white hover:border-pink-300 opacity-70'}`}>
-                             {selectedCastIds.includes(q.id) && <CheckCircle className="absolute top-2 right-2 text-pink-500" size={20}/>} 
-                             <div className="flex flex-col items-center text-center">
-                                 <img src={getQueenImg(q.dexId)} className="w-20 h-20" />
-                                 <span className="font-bold text-sm mt-2">{q.name}</span>
-                                 <span className="text-xs text-gray-500 italic">{q.personality}</span>
-                             </div>
-                        </div>
-                    ))}
+                    {QUEEN_BLUEPRINTS.map(template => {
+                        const preview = getDisplayForm(template, seasonMode);
+                        const evolutionsAvailable = template.forms.length - 1;
+                        const badgeText = evolutionsAvailable > 0
+                            ? `${evolutionsAvailable} evolution${evolutionsAvailable > 1 ? 's' : ''}`
+                            : 'Final form';
+                        return (
+                            <div key={template.id} onClick={() => toggleQueenSelection(template.id)}
+                                 className={`cursor-pointer p-3 rounded-xl border-2 transition-all relative ${selectedCastIds.includes(template.id) ? 'border-pink-500 bg-pink-50 shadow-md transform scale-105' : 'border-gray-200 bg-white hover:border-pink-300 opacity-70'}`}>
+                                 {selectedCastIds.includes(template.id) && <CheckCircle className="absolute top-2 right-2 text-pink-500" size={20}/>}
+                                 <div className="flex flex-col items-center text-center space-y-1">
+                                     <img src={getQueenImg(preview.dexId)} className="w-20 h-20" />
+                                     <span className="font-bold text-sm mt-1">{preview.name}</span>
+                                     <span className="text-xs text-gray-500 italic">{preview.personality}</span>
+                                     <span className="text-[10px] uppercase tracking-widest text-pink-500 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">{badgeText}</span>
+                                 </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         )}
@@ -1120,23 +1968,29 @@ export default function PokeDragRaceSimulator() {
                                 <div>
                                     <p className="text-[11px] uppercase tracking-[0.3em] text-purple-200">Evolution Boost</p>
                                     <h4 className="text-lg font-bold">Trigger a Mid-Season Evolution</h4>
-                                    <p className="text-[11px] text-purple-100/80 mt-1 leading-relaxed">Evolving instantly upgrades a queen to her next form, permanently replacing her stats and portrait. Each queen can only evolve once per season.</p>
+                                    <p className="text-[11px] text-purple-100/80 mt-1 leading-relaxed">Evolving instantly upgrades a queen to her next form, permanently replacing her stats and portrait. Queens can blossom through every stage in their line—some glow up once, others twice.</p>
                                 </div>
                                 <Sparkles size={20} className="text-yellow-300" />
                             </div>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                                {evolvableQueens.map(queen => (
-                                    <div key={queen.id} className="bg-purple-950/60 border border-purple-700 rounded-xl p-3 flex items-center justify-between">
-                                        <div className="flex items-center space-x-3">
-                                            <img src={getQueenImg(queen.dexId)} className="w-12 h-12 rounded-full border border-purple-500" />
-                                            <div>
-                                                <div className="font-semibold text-sm">{queen.name}</div>
-                                                <div className="text-[10px] uppercase tracking-widest text-purple-300">Ready to evolve</div>
+                                {evolvableQueens.map(queen => {
+                                    const nextStageIndex = (queen.evolutionStage ?? 0) + 1;
+                                    const nextForm = queen.evolutionLine ? queen.evolutionLine[nextStageIndex] : undefined;
+                                    const evolutionsLeft = queen.evolutionLine ? queen.evolutionLine.length - nextStageIndex - 1 : 0;
+                                    return (
+                                        <div key={queen.id} className="bg-purple-950/60 border border-purple-700 rounded-xl p-3 flex items-center justify-between">
+                                            <div className="flex items-center space-x-3">
+                                                <img src={getQueenImg(queen.dexId)} className="w-12 h-12 rounded-full border border-purple-500" />
+                                                <div>
+                                                    <div className="font-semibold text-sm">{queen.name}</div>
+                                                    <div className="text-[10px] uppercase tracking-widest text-purple-300">Next stop: {nextForm?.name || 'Glow-up'}</div>
+                                                    <div className="text-[10px] text-purple-200">{evolutionsLeft > 0 ? `${evolutionsLeft} more evolution${evolutionsLeft > 1 ? 's' : ''} after this` : 'Final form unlocked'}</div>
+                                                </div>
                                             </div>
+                                            <button onClick={() => handleEvolution(queen.id)} className="bg-gradient-to-r from-purple-400 to-pink-400 text-gray-900 font-bold text-xs uppercase tracking-widest px-4 py-2 rounded-full hover:from-purple-300 hover:to-pink-300">Evolve</button>
                                         </div>
-                                        <button onClick={() => handleEvolution(queen.id)} className="bg-gradient-to-r from-purple-400 to-pink-400 text-gray-900 font-bold text-xs uppercase tracking-widest px-4 py-2 rounded-full hover:from-purple-300 hover:to-pink-300">Evolve</button>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
@@ -1663,11 +2517,13 @@ export default function PokeDragRaceSimulator() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100 font-sans overflow-hidden text-gray-800">
-      <div className="w-20 md:w-72 bg-gradient-to-b from-pink-900 to-purple-900 text-pink-100 flex flex-col shadow-2xl z-30">
-        <div className="p-6 font-extrabold text-3xl tracking-tighter text-center border-b border-pink-800/30 text-white flex items-center justify-center">
-          <Crown className="md:mr-3 text-pink-400" /><span className="hidden md:inline">POKÉDRAG</span>
-        </div>
+    <>
+      <style>{evolutionStyles}</style>
+      <div className="flex h-screen bg-gray-100 font-sans overflow-hidden text-gray-800">
+        <div className="w-20 md:w-72 bg-gradient-to-b from-pink-900 to-purple-900 text-pink-100 flex flex-col shadow-2xl z-30">
+          <div className="p-6 font-extrabold text-3xl tracking-tighter text-center border-b border-pink-800/30 text-white flex items-center justify-center">
+            <Crown className="md:mr-3 text-pink-400" /><span className="hidden md:inline">POKÉDRAG</span>
+          </div>
         <nav className="flex-grow py-8 space-y-3 px-4">
            <NavButton icon={<Star size={24} />} label="Game" active={activeTab === 'game'} onClick={() => setActiveTab('game')} />
            <NavButton icon={<BarChart3 size={24} />} label="Track Record" active={activeTab === 'trackRecord'} onClick={() => setActiveTab('trackRecord')} disabled={phase === 'SETUP' || phase === 'CAST_SELECTION'} />
@@ -1679,7 +2535,8 @@ export default function PokeDragRaceSimulator() {
           {activeTab === 'trackRecord' && <TrackRecordTab />}
           {activeTab === 'stats' && <StatsTab />}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

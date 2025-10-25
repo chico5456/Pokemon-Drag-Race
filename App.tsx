@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Trophy, Skull, Mic, Shirt, Video, Music, Sparkles, Crown, Gavel, RefreshCw, Settings,
   BarChart3, Video as VideoIcon, MessageSquare, HeartCrack, Star, Scissors, Palette,
@@ -889,6 +889,14 @@ interface Challenge {
   isPremiereFriendly?: boolean;
 }
 
+const REVENGE_CHALLENGE: Challenge = {
+  name: "Revenge of the Queens",
+  type: 'comedy',
+  description: "Returning legends storm the stage in a partnered stand-up smackdown for redemption.",
+  primaryStats: ['comedy', 'improv'],
+  icon: <Mic size={32} className="text-purple-500" />,
+};
+
 const CHALLENGES: Challenge[] = [
   { name: "PokéBall Ball", type: 'ball', description: "Bring 3 looks to the runway: Baby Mon Realness, Type Specialist, and a look made of Pokémon Cards.", primaryStats: ['design'], icon: <Scissors size={32} className="text-pink-500" /> },
   { name: "Snatch Game", type: 'snatch_game', description: "Impersonate celebrities while freezing your Pokéballs off at Seafoam Islands.", primaryStats: ['comedy', 'improv'], icon: <Smile size={32} className="text-yellow-500" /> },
@@ -1149,7 +1157,7 @@ export default function PokeDragRaceSimulator() {
   const [splitPremiere, setSplitPremiere] = useState(false);
   const [competitionFormat, setCompetitionFormat] = useState<'standard' | 'allStars'>('standard');
   const [seasonMode, setSeasonMode] = useState<SeasonMode>('final');
-  const [pendingLegacyElimination, setPendingLegacyElimination] = useState<{ winnerId: number; options: Queen[] } | null>(null);
+  const [pendingLegacyElimination, setPendingLegacyElimination] = useState<{ winnerId: number; options: Queen[]; allies?: number[] } | null>(null);
   const [latestResults, setLatestResults] = useState<Record<number, Placement>>({});
   const [recentEvolution, setRecentEvolution] = useState<{
       queenId: number;
@@ -1157,6 +1165,12 @@ export default function PokeDragRaceSimulator() {
       toName: string;
       statBoosts: { stat: StatCategory; amount: number }[];
   } | null>(null);
+  const [revengeEpisodeTriggered, setRevengeEpisodeTriggered] = useState(false);
+  const [revengeEpisodeActive, setRevengeEpisodeActive] = useState(false);
+  const [revengeReturneeIds, setRevengeReturneeIds] = useState<number[]>([]);
+  const [revengeTopReturneeIds, setRevengeTopReturneeIds] = useState<number[]>([]);
+  const [revengeBottomIds, setRevengeBottomIds] = useState<number[]>([]);
+  const [revengePairings, setRevengePairings] = useState<{ returneeId: number; partnerId: number }[]>([]);
 
   // --- Derived State ---
   const activeQueens = useMemo(() => cast.filter(q => q.status === 'active'), [cast]);
@@ -1165,12 +1179,68 @@ export default function PokeDragRaceSimulator() {
           setSplitPremiere(false);
       }
   }, [competitionFormat, splitPremiere]);
+  useEffect(() => {
+      if (
+          competitionFormat === 'allStars' &&
+          phase === 'CHALLENGE_SELECTION' &&
+          episodeCount === 5 &&
+          !revengeEpisodeTriggered
+      ) {
+          const eliminated = cast.filter(q => q.status === 'eliminated');
+          if (eliminated.length === 0) {
+              setRevengeEpisodeTriggered(true);
+              return;
+          }
+
+          setRevengeEpisodeTriggered(true);
+          setRevengeEpisodeActive(true);
+          setRevengeReturneeIds(eliminated.map(q => q.id));
+
+          const activePool = [...activeQueens];
+          if (activePool.length > 0) {
+              const pairings: { returneeId: number; partnerId: number }[] = [];
+              eliminated.forEach((returnee, index) => {
+                  const partner = activePool[index % activePool.length];
+                  pairings.push({ returneeId: returnee.id, partnerId: partner.id });
+              });
+              setRevengePairings(pairings);
+          } else {
+              setRevengePairings([]);
+          }
+
+          setCurrentStoryline('All the eliminated queens storm back into the werkroom for REVENGE OF THE QUEENS!');
+      }
+  }, [competitionFormat, phase, episodeCount, revengeEpisodeTriggered, cast, activeQueens]);
+
+  useEffect(() => {
+      if (revengeEpisodeActive && phase === 'CHALLENGE_SELECTION') {
+          if (!currentChallenge || currentChallenge.name !== REVENGE_CHALLENGE.name) {
+              generateChallenge(REVENGE_CHALLENGE);
+          }
+      }
+  }, [revengeEpisodeActive, phase, currentChallenge, generateChallenge]);
   // For split premiere, we only want queens in the current episode's group
+  const revengeReturnees = useMemo(
+      () => revengeEpisodeActive
+          ? cast.filter(q => revengeReturneeIds.includes(q.id))
+          : [],
+      [cast, revengeEpisodeActive, revengeReturneeIds]
+  );
+
   const currentEpisodeQueens = useMemo(() => {
       if (splitPremiere && episodeCount === 1) return activeQueens.filter(q => q.group === 1);
       if (splitPremiere && episodeCount === 2) return activeQueens.filter(q => q.group === 2);
+      if (revengeEpisodeActive) {
+          const combined: Queen[] = [...activeQueens];
+          revengeReturnees.forEach(returnee => {
+              if (!combined.some(q => q.id === returnee.id)) {
+                  combined.push(returnee);
+              }
+          });
+          return combined;
+      }
       return activeQueens;
-  }, [activeQueens, splitPremiere, episodeCount]);
+  }, [activeQueens, splitPremiere, episodeCount, revengeEpisodeActive, revengeReturnees]);
 
   const eliminatedQueens = useMemo(() => cast.filter(q => q.status === 'eliminated'), [cast]);
   const evolvableQueens = useMemo(
@@ -1199,6 +1269,12 @@ export default function PokeDragRaceSimulator() {
       setUnsavedPlacements({});
       setLatestResults({});
       setRecentEvolution(null);
+      setRevengeEpisodeTriggered(false);
+      setRevengeEpisodeActive(false);
+      setRevengeReturneeIds([]);
+      setRevengeTopReturneeIds([]);
+      setRevengeBottomIds([]);
+      setRevengePairings([]);
   }
 
   const toggleQueenSelection = (id: number) => {
@@ -1242,6 +1318,12 @@ export default function PokeDragRaceSimulator() {
       setDoubleShantayUsed(false);
       setPendingLegacyElimination(null);
       setActiveTab('game');
+      setRevengeEpisodeTriggered(false);
+      setRevengeEpisodeActive(false);
+      setRevengeReturneeIds([]);
+      setRevengeTopReturneeIds([]);
+      setRevengeBottomIds([]);
+      setRevengePairings([]);
   };
 
   const nextPhase = () => {
@@ -1282,19 +1364,26 @@ export default function PokeDragRaceSimulator() {
           } else {
               setPhase('CHALLENGE_SELECTION');
           }
+          if (episodeCount >= 5) {
+              setRevengeEpisodeActive(false);
+              setRevengeReturneeIds([]);
+              setRevengeTopReturneeIds([]);
+              setRevengeBottomIds([]);
+              setRevengePairings([]);
+          }
         }
         break;
       case 'FINALE': setPhase('SEASON_OVER'); break;
     }
   };
 
-  const generateChallenge = (challenge: Challenge) => {
+  const generateChallenge = useCallback((challenge: Challenge) => {
     setCurrentChallenge(challenge);
     setUnsavedPlacements({});
     setLatestResults({});
     setChallengeHistory(prev => [...prev, challenge]);
     setCurrentStoryline(`Episode ${episodeCount}: The queens prepare for the ${challenge.name}.`);
-  };
+  }, [episodeCount]);
 
   const generateInitialPlacements = () => {
     if (!currentChallenge) return;
@@ -1302,6 +1391,54 @@ export default function PokeDragRaceSimulator() {
     const modifiers: Record<number, number> = {};
     const isSplitNonElim = splitPremiere && episodeCount <= 2;
     const isAllStarsEpisode = competitionFormat === 'allStars' && !isSplitNonElim;
+
+    if (revengeEpisodeActive) {
+        const activeCompetitors = currentEpisodeQueens.filter(q => q.status === 'active');
+        const returnees = currentEpisodeQueens.filter(q => revengeReturneeIds.includes(q.id));
+        const placements: Record<number, Placement> = {};
+
+        activeCompetitors.forEach(q => { placements[q.id] = 'SAFE'; });
+        returnees.forEach(q => { placements[q.id] = 'SAFE'; });
+
+        const activeScores = activeCompetitors
+            .map(q => ({ id: q.id, score: calculatePerformance(q, currentChallenge, modifiers) }))
+            .sort((a, b) => b.score - a.score);
+        const returneeScores = returnees
+            .map(q => ({ id: q.id, score: calculatePerformance(q, currentChallenge, modifiers) }))
+            .sort((a, b) => b.score - a.score);
+
+        if (activeScores.length > 0) {
+            placements[activeScores[0].id] = 'HIGH';
+            if (activeScores.length > 1) {
+                placements[activeScores[1].id] = 'HIGH';
+            }
+            if (activeScores.length > 3) {
+                placements[activeScores[activeScores.length - 3].id] = 'LOW';
+            }
+            if (activeScores.length > 1) {
+                const bottomTwo = activeScores.slice(-2);
+                setRevengeBottomIds(bottomTwo.map(entry => entry.id));
+                bottomTwo.forEach(entry => {
+                    placements[entry.id] = 'BTM2';
+                });
+            } else {
+                setRevengeBottomIds([]);
+            }
+        }
+
+        if (returneeScores.length > 0) {
+            const topReturnees = returneeScores.slice(0, Math.min(2, returneeScores.length));
+            setRevengeTopReturneeIds(topReturnees.map(entry => entry.id));
+            topReturnees.forEach(entry => {
+                placements[entry.id] = 'TOP2';
+            });
+        } else {
+            setRevengeTopReturneeIds([]);
+        }
+
+        setUnsavedPlacements(placements);
+        return;
+    }
 
     // --- Untucked/Workroom Drama Generators that affect score ---
     currentEpisodeQueens.forEach(q => {
@@ -1487,7 +1624,13 @@ export default function PokeDragRaceSimulator() {
     const isAllStarsEpisode = competitionFormat === 'allStars' && !isSplitNonElim;
     let pair: Queen[] = [];
 
-    if (isSplitNonElim || isAllStarsEpisode) {
+    if (revengeEpisodeActive && revengeTopReturneeIds.length > 0) {
+        pair = revengeTopReturneeIds
+            .map(id => cast.find(q => q.id === id))
+            .filter((q): q is Queen => Boolean(q));
+        const faceOff = pair.map(q => q.name).join(' vs ');
+        setCurrentStoryline(`Revenge Lip Sync: ${faceOff || '???'}! Winner${pair.length > 1 ? 's' : ''} return to the competition.`);
+    } else if (isSplitNonElim || isAllStarsEpisode) {
         // Top 2 Lipsync
         pair = currentEpisodeQueens.filter(q => q.trackRecord[q.trackRecord.length - 1] === 'TOP2');
         setCurrentStoryline(
@@ -1511,6 +1654,54 @@ export default function PokeDragRaceSimulator() {
         if (doubleShantayUsed) { alert("Already used!"); return; }
         setDoubleShantayUsed(true);
         setCurrentStoryline("Shantay you BOTH stay! (Double Shantay used)");
+        setPhase('ELIMINATION');
+        return;
+    }
+
+    if (revengeEpisodeActive && revengeTopReturneeIds.length > 0) {
+        const winners = revengeTopReturneeIds
+            .map(id => cast.find(q => q.id === id))
+            .filter((q): q is Queen => Boolean(q));
+        const winnerNames = winners.map(w => w.name).join(' & ');
+        const losingReturnees = revengeReturneeIds.filter(id => !revengeTopReturneeIds.includes(id));
+
+        setCast(prev => prev.map(q => {
+            if (revengeTopReturneeIds.includes(q.id)) {
+                const tr = [...q.trackRecord];
+                tr[tr.length - 1] = 'WIN';
+                return {
+                    ...q,
+                    status: 'active',
+                    trackRecord: tr,
+                    confessionals: ["I'm back in the race and ready to slay!", ...q.confessionals].slice(0, 10)
+                };
+            }
+            if (losingReturnees.includes(q.id)) {
+                const tr = [...q.trackRecord];
+                tr.pop();
+                return { ...q, trackRecord: tr };
+            }
+            return q;
+        }));
+
+        const bottomQueens = currentEpisodeQueens.filter(q => revengeBottomIds.includes(q.id));
+        if (bottomQueens.length > 0) {
+            setPendingLegacyElimination({
+                winnerId: winners[0]?.id ?? revengeTopReturneeIds[0],
+                options: bottomQueens,
+                allies: winners.slice(1).map(w => w.id)
+            });
+            setCurrentStoryline(`${winnerNames} return to the competition and now decide who will sashay away.`);
+        } else {
+            setPendingLegacyElimination(null);
+            setCurrentStoryline(`${winnerNames} return to the competition! No one is up for elimination this week.`);
+        }
+
+        setRevengeEpisodeActive(false);
+        setRevengeReturneeIds([]);
+        setRevengeTopReturneeIds([]);
+        setRevengeBottomIds([]);
+        setRevengePairings([]);
         setPhase('ELIMINATION');
         return;
     }
@@ -1577,6 +1768,9 @@ export default function PokeDragRaceSimulator() {
   const handleLegacyElimination = (queenId: number) => {
     if (!pendingLegacyElimination) return;
     const eliminator = cast.find(c => c.id === pendingLegacyElimination.winnerId);
+    const allyNames = (pendingLegacyElimination.allies || [])
+        .map(id => cast.find(c => c.id === id)?.name)
+        .filter(Boolean) as string[];
     const eliminatedQueen = cast.find(c => c.id === queenId);
 
     setCast(prev => prev.map(q => {
@@ -1589,7 +1783,8 @@ export default function PokeDragRaceSimulator() {
     }));
 
     setPendingLegacyElimination(null);
-    setCurrentStoryline(`${eliminatedQueen?.name}, ${eliminator?.name} has chosen for you to sashay away.`);
+    const decidingNames = [eliminator?.name, ...allyNames].filter(Boolean).join(' & ');
+    setCurrentStoryline(`${eliminatedQueen?.name}, ${decidingNames || 'the winner'} ${allyNames.length > 0 ? 'have' : 'has'} chosen for you to sashay away.`);
   };
 
   const simulateFinale = () => {
@@ -1844,27 +2039,88 @@ export default function PokeDragRaceSimulator() {
 
         {(phase === 'CHALLENGE_SELECTION') && (
           <div className="max-w-5xl mx-auto">
-            <h2 className="text-4xl font-extrabold text-pink-900 text-center mb-8 flex items-center justify-center"><Star className="mr-3 text-yellow-400" fill="currentColor" /> Select Next Challenge</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {CHALLENGES.filter(c => !splitPremiere || episodeCount > 2 || c.isPremiereFriendly).map((challenge, idx) => (
-                <button 
-                    key={idx} 
-                    onClick={() => generateChallenge(challenge)} 
-                    className="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-pink-400 flex flex-col items-center text-center group"
-                >
-                  <div className="bg-pink-50 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
-                      {challenge.icon}
-                  </div>
-                  <h3 className="font-bold text-xl text-gray-800 mb-2">{challenge.name}</h3>
-                  <p className="text-sm text-gray-500 mb-4 line-clamp-2">{challenge.description}</p>
-                  <div className="flex flex-wrap justify-center gap-2 mt-auto">
-                    {challenge.primaryStats.map(stat => (
-                      <span key={stat} className="bg-pink-100 text-pink-800 px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wider">{stat}</span>
-                    ))}
-                  </div>
-                </button>
-              ))}
-            </div>
+            {revengeEpisodeActive ? (
+                <div className="space-y-8">
+                    <div className="text-center">
+                        <h2 className="text-4xl font-extrabold text-purple-900 tracking-tight flex items-center justify-center"><Sparkles className="mr-3 text-purple-400" /> Episode 5 • Revenge of the Queens</h2>
+                        <p className="text-lg text-purple-600 mt-3 max-w-3xl mx-auto">The eliminated legends are back and teaming up with the remaining queens for a stand-up smackdown. Whoever shines on stage can reclaim their spot in the race.</p>
+                    </div>
+                    <div className="bg-white rounded-3xl border border-purple-200 shadow-xl p-6 space-y-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-sm uppercase tracking-[0.4em] text-purple-500">Returning Icons</h3>
+                                <p className="text-base text-purple-700">{revengeReturnees.length > 0 ? 'They are paired with a current queen for the comedy showdown.' : 'No one has left the competition yet—what a twist!'}</p>
+                            </div>
+                            <div className="bg-purple-50 text-purple-500 px-4 py-1 rounded-full text-xs font-semibold border border-purple-100">Stand-Up Challenge</div>
+                        </div>
+                        {revengeReturnees.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {revengePairings.map(pair => {
+                                    const returnee = cast.find(q => q.id === pair.returneeId);
+                                    const partner = cast.find(q => q.id === pair.partnerId);
+                                    if (!returnee || !partner) return null;
+                                    return (
+                                        <div key={`${pair.returneeId}-${pair.partnerId}`} className="bg-gradient-to-br from-purple-50 via-pink-50 to-white border border-purple-100 rounded-2xl p-4 shadow-md">
+                                            <div className="flex items-center space-x-3">
+                                                <img src={getQueenImg(returnee.dexId)} className="w-14 h-14 rounded-full border-2 border-purple-200 bg-white" />
+                                                <div>
+                                                    <div className="text-xs uppercase tracking-widest text-purple-500">Returnee</div>
+                                                    <div className="font-bold text-purple-900">{returnee.name}</div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center space-x-3 mt-4">
+                                                <img src={getQueenImg(partner.dexId)} className="w-12 h-12 rounded-full border-2 border-pink-200 bg-white" />
+                                                <div>
+                                                    <div className="text-[10px] uppercase tracking-[0.4em] text-pink-500">Partner</div>
+                                                    <div className="font-semibold text-pink-700">{partner.name}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="text-sm text-purple-500 italic">No queens are returning... the legacy girls are shaking.</div>
+                        )}
+                        <div className="bg-purple-900 text-purple-100 rounded-2xl p-5 flex items-center space-x-4">
+                            <Mic className="text-pink-200" />
+                            <div className="text-left">
+                                <div className="text-xs uppercase tracking-[0.4em] text-purple-300">This Week's Challenge</div>
+                                <div className="text-lg font-semibold">{REVENGE_CHALLENGE.description}</div>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {REVENGE_CHALLENGE.primaryStats.map(stat => (
+                                        <span key={stat} className="bg-purple-800/70 border border-purple-600 px-3 py-1 rounded-full text-[11px] uppercase tracking-widest">{stat}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <>
+                    <h2 className="text-4xl font-extrabold text-pink-900 text-center mb-8 flex items-center justify-center"><Star className="mr-3 text-yellow-400" fill="currentColor" /> Select Next Challenge</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {CHALLENGES.filter(c => !splitPremiere || episodeCount > 2 || c.isPremiereFriendly).map((challenge, idx) => (
+                        <button
+                            key={idx}
+                            onClick={() => generateChallenge(challenge)}
+                            className="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-pink-400 flex flex-col items-center text-center group"
+                        >
+                          <div className="bg-pink-50 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
+                              {challenge.icon}
+                          </div>
+                          <h3 className="font-bold text-xl text-gray-800 mb-2">{challenge.name}</h3>
+                          <p className="text-sm text-gray-500 mb-4 line-clamp-2">{challenge.description}</p>
+                          <div className="flex flex-wrap justify-center gap-2 mt-auto">
+                            {challenge.primaryStats.map(stat => (
+                              <span key={stat} className="bg-pink-100 text-pink-800 px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wider">{stat}</span>
+                            ))}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                </>
+            )}
           </div>
         )}
 
@@ -2179,7 +2435,7 @@ export default function PokeDragRaceSimulator() {
             </div>
         )}
 
-        {phase === 'LIPSYNC' && lipsyncPair.length === 2 && (
+        {phase === 'LIPSYNC' && lipsyncPair.length >= 1 && (
           <div className="text-center space-y-12 mt-8">
             <div className="animate-pulse">
                 <h2 className="text-5xl font-extrabold text-red-600 tracking-tighter">
@@ -2203,11 +2459,15 @@ export default function PokeDragRaceSimulator() {
                        <h3 className="text-2xl font-bold mt-6 bg-white px-6 py-2 rounded-full shadow-md">{queen.name}</h3>
                        <div className="mt-3 bg-white/50 p-2 rounded-lg"><MiniTrackRecord trackRecord={queen.trackRecord} /></div>
                        <span className="mt-4 bg-red-100 text-red-700 px-4 py-1 rounded-full text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-                           {(splitPremiere && episodeCount <= 2) ? "CLICK TO WIN" : "CLICK TO SAVE"}
+                           {(splitPremiere && episodeCount <= 2)
+                               ? "CLICK TO WIN"
+                               : revengeEpisodeActive
+                                   ? "CLICK TO RETURN"
+                                   : "CLICK TO SAVE"}
                        </span>
                    </div>
                ))}
-            </div>
+           </div>
             {!(splitPremiere && episodeCount <= 2) && competitionFormat !== 'allStars' && (
                  <button onClick={() => handleLipsyncWinner(0, true)} disabled={doubleShantayUsed} className="bg-pink-100 text-pink-800 px-6 py-3 rounded-full font-bold hover:bg-pink-200 disabled:opacity-50">
                     {doubleShantayUsed ? "Double Shantay Used" : "Double Shantay (Both Stay)"}
@@ -2220,7 +2480,18 @@ export default function PokeDragRaceSimulator() {
             <div className="flex flex-col items-center justify-center h-full space-y-8 text-center animate-in fade-in duration-1000">
                 <Megaphone size={120} className="text-purple-400 drop-shadow-lg" />
                 <h2 className="text-4xl font-extrabold text-purple-900">Legacy Decision</h2>
-                <p className="text-lg text-purple-700 max-w-2xl">{cast.find(c => c.id === pendingLegacyElimination.winnerId)?.name} won the lip sync! Choose which bottom queen will sashay away.</p>
+                <p className="text-lg text-purple-700 max-w-2xl">
+                    {(() => {
+                        const primary = cast.find(c => c.id === pendingLegacyElimination.winnerId);
+                        const allies = (pendingLegacyElimination.allies || [])
+                            .map(id => cast.find(c => c.id === id)?.name)
+                            .filter(Boolean) as string[];
+                        const names = [primary?.name, ...allies].filter(Boolean).join(' & ');
+                        return names.length > 0
+                            ? `${names} ${allies.length > 0 ? 'have' : 'has'} the power this week. Choose which bottom queen will sashay away.`
+                            : 'Choose which bottom queen will sashay away.';
+                    })()}
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {pendingLegacyElimination.options.map(option => {
                         const summary = summarizePlacements(option.trackRecord);

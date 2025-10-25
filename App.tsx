@@ -372,7 +372,17 @@ export default function PokeDragRaceSimulator() {
   }, [activeQueens, splitPremiere, episodeCount]);
 
   const eliminatedQueens = useMemo(() => cast.filter(q => q.status === 'eliminated'), [cast]);
-  const evolvableQueens = useMemo(() => currentEpisodeQueens.filter(q => q.evolution && !q.hasEvolved), [currentEpisodeQueens]);
+  const evolvableQueens = useMemo(
+      () => currentEpisodeQueens.filter(q => q.evolution && !q.hasEvolved),
+      [currentEpisodeQueens]
+  );
+  const evolvableNames = useMemo(() => evolvableQueens.map(q => q.name), [evolvableQueens]);
+  const formattedEvolvableNames = useMemo(() => {
+      if (evolvableNames.length === 0) return '';
+      if (evolvableNames.length === 1) return evolvableNames[0];
+      if (evolvableNames.length === 2) return `${evolvableNames[0]} & ${evolvableNames[1]}`;
+      return `${evolvableNames.slice(0, -1).join(', ')} & ${evolvableNames[evolvableNames.length - 1]}`;
+  }, [evolvableNames]);
 
   // --- Phase Handlers ---
 
@@ -1038,7 +1048,34 @@ export default function PokeDragRaceSimulator() {
                   <Settings size={16} /> <span>{producersMode ? 'Exit Producer Mode' : 'Producer Mode'}</span>
                </button>
             </div>
-            
+
+            {evolvableQueens.length > 0 && (
+                <div className="bg-gradient-to-r from-purple-100 via-pink-100 to-rose-100 border border-purple-200 rounded-2xl p-4 shadow-inner">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                        <div className="flex items-start space-x-3">
+                            <div className="bg-white/80 p-2 rounded-full shadow-sm">
+                                <Sparkles className="text-purple-500" />
+                            </div>
+                            <div>
+                                <p className="text-xs uppercase tracking-[0.4em] text-purple-500">Evolution Alert</p>
+                                <p className="text-sm text-purple-900 leading-relaxed">
+                                    {formattedEvolvableNames} {evolvableNames.length > 1 ? 'are' : 'is'} primed for a glow-up. Toggle Producer Mode and press{' '}
+                                    <span className="font-semibold">Evolve</span> to swap in their evolved stats for the rest of the season.
+                                </p>
+                            </div>
+                        </div>
+                        {!producersMode && (
+                            <button
+                                onClick={() => setProducersMode(true)}
+                                className="self-start md:self-center bg-purple-600 text-white text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full shadow hover:bg-purple-700"
+                            >
+                                Open Producer Mode
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {producersMode && (
                 <div className="bg-gray-800 p-6 rounded-xl text-white mb-6 border-4 border-red-500 shadow-2xl">
                     <h3 className="font-bold text-xl flex items-center text-red-400 mb-4">Producer Override</h3>
@@ -1083,6 +1120,7 @@ export default function PokeDragRaceSimulator() {
                                 <div>
                                     <p className="text-[11px] uppercase tracking-[0.3em] text-purple-200">Evolution Boost</p>
                                     <h4 className="text-lg font-bold">Trigger a Mid-Season Evolution</h4>
+                                    <p className="text-[11px] text-purple-100/80 mt-1 leading-relaxed">Evolving instantly upgrades a queen to her next form, permanently replacing her stats and portrait. Each queen can only evolve once per season.</p>
                                 </div>
                                 <Sparkles size={20} className="text-yellow-300" />
                             </div>

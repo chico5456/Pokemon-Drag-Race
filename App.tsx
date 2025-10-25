@@ -1172,6 +1172,14 @@ export default function PokeDragRaceSimulator() {
   const [revengeBottomIds, setRevengeBottomIds] = useState<number[]>([]);
   const [revengePairings, setRevengePairings] = useState<{ returneeId: number; partnerId: number }[]>([]);
 
+  const generateChallenge = useCallback((challenge: Challenge) => {
+      setCurrentChallenge(challenge);
+      setUnsavedPlacements({});
+      setLatestResults({});
+      setChallengeHistory(prev => [...prev, challenge]);
+      setCurrentStoryline(`Episode ${episodeCount}: The queens prepare for the ${challenge.name}.`);
+  }, [episodeCount]);
+
   // --- Derived State ---
   const activeQueens = useMemo(() => cast.filter(q => q.status === 'active'), [cast]);
   useEffect(() => {
@@ -1369,14 +1377,6 @@ export default function PokeDragRaceSimulator() {
       case 'FINALE': setPhase('SEASON_OVER'); break;
     }
   };
-
-  const generateChallenge = useCallback((challenge: Challenge) => {
-    setCurrentChallenge(challenge);
-    setUnsavedPlacements({});
-    setLatestResults({});
-    setChallengeHistory(prev => [...prev, challenge]);
-    setCurrentStoryline(`Episode ${episodeCount}: The queens prepare for the ${challenge.name}.`);
-  }, [episodeCount]);
 
   useEffect(() => {
       if (revengeEpisodeActive && phase === 'CHALLENGE_SELECTION') {

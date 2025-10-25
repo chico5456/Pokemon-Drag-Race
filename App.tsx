@@ -1212,13 +1212,6 @@ export default function PokeDragRaceSimulator() {
       }
   }, [competitionFormat, phase, episodeCount, revengeEpisodeTriggered, cast, activeQueens]);
 
-  useEffect(() => {
-      if (revengeEpisodeActive && phase === 'CHALLENGE_SELECTION') {
-          if (!currentChallenge || currentChallenge.name !== REVENGE_CHALLENGE.name) {
-              generateChallenge(REVENGE_CHALLENGE);
-          }
-      }
-  }, [revengeEpisodeActive, phase, currentChallenge, generateChallenge]);
   // For split premiere, we only want queens in the current episode's group
   const revengeReturnees = useMemo(
       () => revengeEpisodeActive
@@ -1384,6 +1377,14 @@ export default function PokeDragRaceSimulator() {
     setChallengeHistory(prev => [...prev, challenge]);
     setCurrentStoryline(`Episode ${episodeCount}: The queens prepare for the ${challenge.name}.`);
   }, [episodeCount]);
+
+  useEffect(() => {
+      if (revengeEpisodeActive && phase === 'CHALLENGE_SELECTION') {
+          if (!currentChallenge || currentChallenge.name !== REVENGE_CHALLENGE.name) {
+              generateChallenge(REVENGE_CHALLENGE);
+          }
+      }
+  }, [revengeEpisodeActive, phase, currentChallenge, generateChallenge]);
 
   const generateInitialPlacements = () => {
     if (!currentChallenge) return;

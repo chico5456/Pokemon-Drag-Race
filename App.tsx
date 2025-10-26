@@ -3645,96 +3645,124 @@ export default function PokeDragRaceSimulator() {
 
     const queenSummaries = sortedCast.map(queen => ({ queen, summary: summarizePlacements(queen.trackRecord) }));
 
-    const topWins = queenSummaries.slice().sort((a, b) => (b.summary.wins - a.summary.wins) || (b.summary.ppe - a.summary.ppe))[0];
-    const topPPE = queenSummaries.slice().sort((a, b) => b.summary.ppe - a.summary.ppe)[0];
-    const lipSyncHero = queenSummaries.slice().sort((a, b) => b.summary.bottoms - a.summary.bottoms)[0];
+    const placementClassMap: Record<string, string> = {
+        'WIN': 'bg-sky-700 text-white border-sky-800',
+        'WIN+RTRN': 'bg-indigo-600 text-white border-indigo-800',
+        'WIN+OUT': 'bg-violet-600 text-white border-violet-800',
+        'TOP2': 'bg-sky-500 text-white border-sky-700',
+        'HIGH': 'bg-sky-200 text-sky-900 border-sky-400',
+        'SAFE': 'bg-gray-200 text-gray-700 border-gray-300',
+        'LOW': 'bg-rose-200 text-rose-800 border-rose-300',
+        'BTM2': 'bg-rose-600 text-white border-rose-700',
+        'CHOCOLATE': 'bg-amber-600 text-amber-100 border-amber-700',
+        'OUT': 'bg-gray-700 text-gray-100 border-gray-800',
+        'ELIM': 'bg-gray-900 text-rose-400 border-gray-700',
+        'RUNNER-UP': 'bg-gray-300 text-gray-900 border-gray-400',
+        'WINNER': 'bg-yellow-400 text-yellow-900 border-yellow-500',
+        'RETURN': 'bg-emerald-500 text-white border-emerald-600',
+        'RTRN': 'bg-emerald-500 text-white border-emerald-600',
+        'N/A': 'bg-gray-100 text-gray-400 border-gray-200',
+        '': 'bg-gray-100 text-gray-400 border-gray-200',
+    };
+
+    const rankLabels = (() => {
+        const labels = new Map<number, string>();
+        let currentRank = 1;
+        let index = 0;
+        while (index < queenSummaries.length) {
+            const { queen } = queenSummaries[index];
+            let groupSize = 1;
+            if (queen.status === 'runner-up') {
+                while (index + groupSize < queenSummaries.length && queenSummaries[index + groupSize].queen.status === 'runner-up') {
+                    groupSize += 1;
+                }
+            }
+
+            const ranks = Array.from({ length: groupSize }, (_, offset) => currentRank + offset);
+            const label = groupSize > 1 ? `${ranks[0]}/${ranks[ranks.length - 1]}` : `${ranks[0]}`;
+
+            for (let i = 0; i < groupSize; i++) {
+                labels.set(queenSummaries[index + i].queen.id, label);
+            }
+
+            currentRank += groupSize;
+            index += groupSize;
+        }
+        return labels;
+    })();
 
     return (
-      <div className="p-8 bg-pink-50 h-full overflow-auto space-y-6">
-        <h2 className="text-4xl font-extrabold text-pink-900 mb-4 flex items-center"><BarChart3 className="mr-4" size={36} /> Season Track Record</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <SeasonHighlightCard
-                title="Most Challenge Wins"
-                accent="bg-gradient-to-r from-pink-500 to-rose-500"
-                queen={topWins?.queen}
-                value={topWins ? `${topWins.summary.wins} win${topWins.summary.wins === 1 ? '' : 's'}` : '—'}
-                subtext={topWins ? `PPE ${formatPPE(topWins.summary.ppe)}` : 'Pending results'}
-            />
-            <SeasonHighlightCard
-                title="Best PPE"
-                accent="bg-gradient-to-r from-purple-500 to-indigo-500"
-                queen={topPPE?.queen}
-                value={topPPE ? formatPPE(topPPE.summary.ppe) : '0.00'}
-                subtext={topPPE ? `${topPPE.summary.wins} wins • ${topPPE.summary.highs} highs` : 'Keep watching!'}
-            />
-            <SeasonHighlightCard
-                title="Lip Sync Assassin"
-                accent="bg-gradient-to-r from-amber-500 to-orange-500"
-                queen={lipSyncHero?.queen}
-                value={lipSyncHero ? `${lipSyncHero.summary.bottoms} lip sync${lipSyncHero.summary.bottoms === 1 ? '' : 's'}` : '0'}
-                subtext={lipSyncHero ? `SAFE ${lipSyncHero.summary.safes} • LOW ${lipSyncHero.summary.lows}` : 'No data yet'}
-            />
-        </div>
-
-        <div className="overflow-x-auto bg-white rounded-3xl shadow-xl border border-pink-100">
-          <table className="min-w-full text-sm">
-            <thead className="bg-gradient-to-r from-pink-600 to-purple-600 text-white uppercase tracking-widest">
-              <tr>
-                <th className="p-4 text-left">Queen</th>
-                {Array.from({ length: maxEpisodes }).map((_, i) => (
-                  <th key={i} className="p-4 text-center">Ep {i + 1}</th>
-                ))}
-                <th className="p-4 text-center">PPE</th>
-                <th className="p-4 text-center">Wins</th>
-                <th className="p-4 text-center">High</th>
-                <th className="p-4 text-center">Low</th>
-                <th className="p-4 text-center">Bottom</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-pink-100">
-              {queenSummaries.map(({ queen, summary }, idx) => {
-                const rowAccent = queen.status === 'winner'
-                    ? 'bg-yellow-50'
-                    : queen.status === 'runner-up'
-                        ? 'bg-purple-50'
-                        : idx % 2 === 0
-                            ? 'bg-white'
-                            : 'bg-pink-50/40';
-                return (
-                  <tr key={queen.id} className={`${rowAccent} transition-colors hover:bg-pink-100/70`}>
-                    <td className="p-4">
-                      <div className="flex items-center space-x-3">
-                        <img src={getQueenImg(queen.dexId)} className="w-12 h-12 bg-gray-100 rounded-full border-2 border-pink-200" />
-                        <div>
-                          <div className="font-bold text-pink-900 flex items-center space-x-2">
-                            <span>{queen.name}</span>
-                            {queen.status === 'winner' && <Crown size={18} className="text-yellow-500" />}
+      <div className="p-6 md:p-10 bg-slate-200 h-full overflow-auto">
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-slate-900 text-white px-6 py-4 rounded-t-3xl border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.55em] text-slate-400">Doll's Drag Race</p>
+              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">Season Track Record</h2>
+            </div>
+            <div className="text-xs text-slate-300 md:text-right">
+              <div>P.P.E — Performance Per Episode</div>
+              <div>{maxEpisodes} episode{maxEpisodes === 1 ? '' : 's'} recorded</div>
+            </div>
+          </div>
+          <div className="overflow-x-auto bg-white rounded-b-3xl border border-slate-300 shadow-2xl">
+            <table className="min-w-full border-collapse text-[13px]">
+              <thead>
+                <tr className="bg-slate-700 text-slate-100 uppercase tracking-[0.4em] text-[11px]">
+                  <th className="px-4 py-3 text-left border border-slate-600">Rank</th>
+                  <th className="px-4 py-3 text-left border border-slate-600">Contestant</th>
+                  {Array.from({ length: maxEpisodes }).map((_, i) => (
+                    <th key={i} className="px-3 py-3 text-center border border-slate-600">Ep {i + 1}</th>
+                  ))}
+                  <th className="px-4 py-3 text-center border border-slate-600">P.P.E</th>
+                </tr>
+              </thead>
+              <tbody>
+                {queenSummaries.map(({ queen, summary }, idx) => {
+                  const rowAccent = queen.status === 'winner'
+                      ? 'bg-yellow-50'
+                      : queen.status === 'runner-up'
+                          ? 'bg-purple-50'
+                          : idx % 2 === 0
+                              ? 'bg-white'
+                              : 'bg-slate-50';
+                  return (
+                    <tr key={queen.id} className={`${rowAccent} text-slate-800`}> 
+                      <td className="px-4 py-3 font-bold text-slate-600 border border-slate-200 text-center">{rankLabels.get(queen.id)}</td>
+                      <td className="px-4 py-3 border border-slate-200">
+                        <div className="flex items-center gap-3">
+                          <img src={getQueenImg(queen.dexId)} className="w-12 h-12 rounded-full border-2 border-slate-300" />
+                          <div>
+                            <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                              <span>{queen.name}</span>
+                              {queen.status === 'winner' && <Crown size={16} className="text-yellow-500" />}
+                            </div>
+                            <div className="text-[10px] uppercase tracking-[0.35em] text-slate-400">{summary.wins} win{summary.wins === 1 ? '' : 's'} • {summary.bottoms} bottom{summary.bottoms === 1 ? '' : 's'}</div>
                           </div>
-                          <div className="text-xs uppercase tracking-widest text-pink-500">PPE {formatPPE(summary.ppe)}</div>
                         </div>
-                      </div>
-                    </td>
-                    {Array.from({ length: maxEpisodes }).map((_, episodeIndex) => {
-                        const placement = queen.trackRecord[episodeIndex] ?? '';
-                        return (
-                            <td key={episodeIndex} className="p-2 text-center">
-                                {placement
-                                    ? <div className="flex justify-center"><PlacementBadge placement={placement as Placement} /></div>
-                                    : <span className="text-gray-300">—</span>}
-                            </td>
-                        );
-                    })}
-                    <td className="p-3 text-center font-semibold text-pink-700">{formatPPE(summary.ppe)}</td>
-                    <td className="p-3 text-center">{summary.wins}</td>
-                    <td className="p-3 text-center">{summary.highs + summary.top2}</td>
-                    <td className="p-3 text-center">{summary.lows}</td>
-                    <td className="p-3 text-center">{summary.bottoms}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      {Array.from({ length: maxEpisodes }).map((_, episodeIndex) => {
+                          const placement = queen.trackRecord[episodeIndex] ?? '';
+                          const placementClasses = placementClassMap[placement] || placementClassMap['SAFE'];
+                          return (
+                              <td key={episodeIndex} className="px-2 py-2 border border-slate-200 text-center">
+                                  {placement
+                                      ? (
+                                          <span className={`block rounded-md px-2 py-1 text-[11px] font-black uppercase tracking-tight shadow-sm border ${placementClasses}`}>
+                                              {placement}
+                                          </span>
+                                      ) : (
+                                          <span className="text-slate-300 font-semibold">—</span>
+                                      )}
+                              </td>
+                          );
+                      })}
+                      <td className="px-4 py-3 border border-slate-200 text-center font-extrabold text-slate-700">{formatPPE(summary.ppe)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     );

@@ -10,6 +10,22 @@ import {
 type StatCategory = 'acting' | 'improv' | 'comedy' | 'dance' | 'design' | 'singing' | 'rusical' | 'rumix' | 'makeover' | 'lipsync';
 type Stats = Record<StatCategory, number>;
 
+type ConfessionalContext =
+  | 'judging'
+  | 'werkroom'
+  | 'untucked'
+  | 'evolution'
+  | 'legacy'
+  | 'challenge'
+  | 'lipSync';
+
+type ConfessionalEntry = {
+  text: string;
+  episode: number;
+  reason: string;
+  context: ConfessionalContext;
+};
+
 type Placement =
   | 'WIN'
   | 'WIN+RTRN'
@@ -52,7 +68,7 @@ interface Queen {
   entranceLine: string;
   trackRecord: Placement[];
   status: 'active' | 'eliminated' | 'winner' | 'runner-up';
-  confessionals: string[];
+  confessionals: ConfessionalEntry[];
   group?: 1 | 2; // For split premiere
   evolutionLine?: QueenForm[];
   evolutionStage?: number;
@@ -903,6 +919,12 @@ interface Challenge {
   isPremiereFriendly?: boolean;
 }
 
+type ChallengeRecap = {
+  episode: number;
+  challenge: Challenge;
+  highlight: string;
+};
+
 const REVENGE_CHALLENGE: Challenge = {
   name: "Revenge of the Queens",
   type: 'comedy',
@@ -942,20 +964,76 @@ const calculatePerformance = (queen: Queen, challenge: Challenge, modifiers: Rec
   return score;
 };
 
-const getConfessional = (queen: Queen, placement: Placement, phase: Phase, challengeType?: ChallengeType, activeQueens?: Queen[]): string => {
+const getConfessional = (
+    queen: Queen,
+    placement: Placement,
+    phase: Phase,
+    episode: number,
+    challenge?: Challenge,
+    activeQueens?: Queen[]
+): ConfessionalEntry => {
     let templates = {
-        WIN: ["I won! Eat it, bitches!", "The crown is practically mine already.", "I proved today that I am THE Top Pokémon."],
-        TOP2: ["Top 2! I need to win this lip sync to get that cash tip.", "I'm safe, but I want that win on my record."],
-        HIGH: ["Always the bridesmaid, never the bride.", "I'm glad the judges saw my talent today.", "So close to winning, ugh!"],
-        SAFE: ["Safe? Ugh, I hate being filler.", "I survived another week, that's what matters.", "I need to step it up if I want to win."],
-        LOW: ["The judges completely missed the point of my look.", "I know I'm better than this.", "I am NOT going home yet."],
-        BTM2: ["I have to lip sync? Fine. I'm going to murder it.", "I am devastated, but I will fight to stay.", "This is embarrassing. Time to turn it out."],
-        ELIM: ["It's heartbreaking to leave so soon.", "I may be leaving, but I'm still a star.", "Vanjie... Vanjie... Vanjie..."],
-        'RUNNER-UP': ["I gave it my all. Congrats to the winner, I guess."],
-        'WINNER': ["I DID IT! I AM AMERICA'S NEXT DRAG SUPERMON!"],
+        WIN: [
+            "I won! Eat it, bitches!",
+            "The crown is practically mine already.",
+            "I proved today that I am THE Top Pokémon.",
+            "Did you see that? That's what domination looks like.",
+            "Another badge on the sash, darling."
+        ],
+        TOP2: [
+            "Top 2! I need to win this lip sync to get that cash tip.",
+            "I'm safe, but I want that win on my record.",
+            "If I don't snatch the win now, when will I?",
+            "Top 2 again? They're obsessed with me."
+        ],
+        HIGH: [
+            "Always the bridesmaid, never the bride.",
+            "I'm glad the judges saw my talent today.",
+            "So close to winning, ugh!",
+            "High placement means they're watching me closely.",
+            "Another critique, another chance to adjust the crown."
+        ],
+        SAFE: [
+            "Safe? Ugh, I hate being filler.",
+            "I survived another week, that's what matters.",
+            "I need to step it up if I want to win.",
+            "Safe is fine, but fine isn't legendary.",
+            "Werkroom politics kept me distracted. Never again."
+        ],
+        LOW: [
+            "The judges completely missed the point of my look.",
+            "I know I'm better than this.",
+            "I am NOT going home yet.",
+            "That runway was a risk... and it almost sent me home.",
+            "My sisters are circling like Sharpedos. I'm bleeding."
+        ],
+        BTM2: [
+            "I have to lip sync? Fine. I'm going to murder it.",
+            "I am devastated, but I will fight to stay.",
+            "This is embarrassing. Time to turn it out.",
+            "They want tears? They'll get a performance instead.",
+            "The judges lit a fire under me—time to scorch the stage."
+        ],
+        ELIM: [
+            "It's heartbreaking to leave so soon.",
+            "I may be leaving, but I'm still a star.",
+            "Vanjie... Vanjie... Vanjie...",
+            "I packed fashion and memories. I'm leaving with both.",
+            "You can eliminate me, but you can't erase me."
+        ],
+        'RUNNER-UP': [
+            "I gave it my all. Congrats to the winner, I guess.",
+            "Second place is still iconic, but I wanted that crown.",
+            "I'll be back. You can't keep a legend down."
+        ],
+        'WINNER': [
+            "I DID IT! I AM AMERICA'S NEXT DRAG SUPERMON!",
+            "My legacy is cemented in glitter and glory.",
+            "This crown was made for me, honey."
+        ],
         'N/A': [],
         '': []
-    };
+    } as Record<Placement | '', string[]>;
 
     // Contextual Confessionals
     if (phase === 'JUDGING' && activeQueens) {
@@ -963,41 +1041,98 @@ const getConfessional = (queen: Queen, placement: Placement, phase: Phase, chall
         const recentPlacements = queen.trackRecord.slice(-2);
         if (placement === 'BTM2' && recentPlacements.includes('BTM2')) {
              templates.BTM2.push("In the bottom AGAIN? I can't keep doing this.");
+             templates.BTM2.push("Two weeks in a row? Someone's plotting against me.");
         }
         // Check for comeback
         if (placement === 'WIN' && recentPlacements.includes('BTM2')) {
              templates.WIN.push("From the bottom to the top! Redemption feels so good.");
+             templates.WIN.push("They doubted me, but this phoenix keeps rising.");
         }
     }
 
-    if (challengeType) {
+    if (challenge?.type) {
         const challengeLines: Partial<Record<ChallengeType, Partial<Record<Placement, string[]>>>> = {
             design: {
-                LOW: ["I don't know how to sew, okay?! Give me a break!", "Hot glue can only do so much when you have no taste."],
-                WIN: ["This outfit is couture, honey. They had no choice but to crown me."],
-                SAFE: ["Thank god I didn't have to lip sync in this mess of an outfit."]
+                LOW: [
+                    "I don't know how to sew, okay?! Give me a break!",
+                    "Hot glue can only do so much when you have no taste.",
+                    "That hemline betrayed me on national television."
+                ],
+                WIN: [
+                    "This outfit is couture, honey. They had no choice but to crown me.",
+                    "Needles, thread, and nerves of steel—that's how you win."
+                ],
+                SAFE: [
+                    "Thank god I didn't have to lip sync in this mess of an outfit.",
+                    "Next time I'm packing a portable sewing machine."
+                ]
             },
             snatch_game: {
-                BTM2: ["I froze up. Snatch Game is harder than it looks!", "My celebrity impersonation fell flat. Dead flat."],
-                WIN: ["I made Ru laugh! That's the golden ticket."],
-                HIGH: ["I thought I was the funniest one up there, honestly."]
+                BTM2: [
+                    "I froze up. Snatch Game is harder than it looks!",
+                    "My celebrity impersonation fell flat. Dead flat.",
+                    "Why did I pick a celebrity no one even remembers?"
+                ],
+                WIN: [
+                    "I made Ru laugh! That's the golden ticket.",
+                    "They'll be quoting me for seasons to come."
+                ],
+                HIGH: [
+                    "I thought I was the funniest one up there, honestly.",
+                    "If I had one more punchline I would've snatched the win."
+                ]
             },
             roast: {
-                 LOW: ["Tough crowd tonight. They didn't get my intellectual humor.", "I think I was too mean... oops."],
-                 WIN: ["I read them all to filth and they loved it!"]
+                 LOW: [
+                    "Tough crowd tonight. They didn't get my intellectual humor.",
+                    "I think I was too mean... oops.",
+                    "I roasted them, then got burned myself."
+                 ],
+                 WIN: [
+                    "I read them all to filth and they loved it!",
+                    "Comedy is a weapon and I wielded it like a sword."
+                 ]
             },
             dance: {
-                 LOW: ["Two left feet? Try four left feet.", "Choreography is NOT my friend."],
-                 BTM2: ["I missed one step and it all went downhill from there."]
+                 LOW: [
+                    "Two left feet? Try four left feet.",
+                    "Choreography is NOT my friend.",
+                    "My knees are suing me after that routine."
+                 ],
+                 BTM2: [
+                    "I missed one step and it all went downhill from there.",
+                    "Why does every eight-count end in humiliation for me?"
+                 ]
             },
             rusical: {
-                WIN: ["I was born to be a star on Broadway, baby!"],
-                SAFE: ["I didn't get the lead role, so I just faded into the background."]
+                WIN: [
+                    "I was born to be a star on Broadway, baby!",
+                    "High notes, high kicks, higher praise."
+                ],
+                SAFE: [
+                    "I didn't get the lead role, so I just faded into the background.",
+                    "Ensemble life is cute but I'm craving the spotlight."
+                ]
+            },
+            improv: {
+                WIN: ["Quick wit, quicker pay-off. That's how you do improv."],
+                LOW: ["My mind went blank and all that came out was static."]
+            },
+            makeover: {
+                WIN: ["Family resemblance? Try cloned perfection."],
+                LOW: ["My makeover partner betrayed me with that walk."]
+            },
+            talent: {
+                WIN: ["Booked and blessed—my talent show stole the night."],
+                LOW: ["Turns out juggling flaming Pokéballs is harder than it looks."]
             }
         };
-        
+
+        const challengeType = challenge.type;
         if (challengeLines[challengeType]?.[placement as keyof typeof challengeLines[ChallengeType]]) {
-             templates[placement as keyof typeof templates].push(...(challengeLines[challengeType]![placement as keyof typeof challengeLines[ChallengeType]]!));
+             templates[placement as keyof typeof templates].push(
+                ...(challengeLines[challengeType]![placement as keyof typeof challengeLines[ChallengeType]]!)
+             );
         }
     }
 
@@ -1006,19 +1141,40 @@ const getConfessional = (queen: Queen, placement: Placement, phase: Phase, chall
         templates.WIN.push("Of course I won. Look at this competition... tragic.");
         templates.SAFE.push("These judges have no taste if they think I'm just 'safe'.");
         templates.ELIM.push("They're just intimidated by my greatness. Their loss.");
+        templates.BTM2.push("Let them think they've got me shook. Plot twist coming.");
     }
     if (queen.personality.includes("Delusional")) {
         templates.LOW.push("Honestly? I should have won. The judges are blind.");
         templates.BTM2.push("They just want a show, that's why I'm in the bottom. I'm too perfect.");
         templates.SAFE.push("I was definitely the best one this week, weird.");
+        templates.HIGH.push("If this is 'high', then a win must be next episode. Duh.");
     }
     if (queen.personality.includes("Perfectionist")) {
         templates.HIGH.push("High isn't good enough. I need to WIN every single week.");
         templates.SAFE.push("I am failing. Safe is failing.");
+        templates.LOW.push("One misstep and my entire legacy crumbles. Unacceptable.");
     }
 
     const pool = templates[placement as keyof typeof templates] || ["I have nothing to say."];
-    return pool[Math.floor(Math.random() * pool.length)];
+    const text = pool[Math.floor(Math.random() * pool.length)];
+    const reasonParts: string[] = [];
+    if (phase === 'JUDGING') {
+        reasonParts.push('Judging debrief');
+    }
+    if (challenge?.name) {
+        reasonParts.push(`${challenge.name} – ${placement}`);
+    } else {
+        reasonParts.push(`${placement} placement`);
+    }
+
+    const context: ConfessionalContext = phase === 'JUDGING' ? 'judging' : 'challenge';
+
+    return {
+        text,
+        episode,
+        context,
+        reason: reasonParts.join(' • ')
+    };
 }
 
 const PLACEMENT_POINTS: Record<Placement, number> = {
@@ -1040,66 +1196,13 @@ const PLACEMENT_POINTS: Record<Placement, number> = {
 
 const STAT_CATEGORIES: StatCategory[] = ['acting', 'improv', 'comedy', 'dance', 'design', 'singing', 'rusical', 'rumix', 'makeover', 'lipsync'];
 
-type PPEChartEntry = {
-    name: string;
-    fullName: string;
-    ppe: number;
-};
-
-const PPEBarChart: React.FC<{ data: PPEChartEntry[]; palette: string[] }> = ({ data, palette }) => {
-    if (!data.length) {
-        return (
-            <div className="h-full flex items-center justify-center text-gray-400 text-sm">
-                Complete at least one episode to view PPE analytics.
-            </div>
-        );
-    }
-
-    return (
-        <div className="space-y-4">
-            {data.map((entry, index) => {
-                const safePPE = Math.max(0, Math.min(entry.ppe, 5));
-                const widthPercent = (safePPE / 5) * 100;
-                return (
-                    <div key={entry.name} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs font-semibold text-pink-700">
-                            <span className="truncate pr-2" title={entry.fullName || entry.name}>{entry.fullName || entry.name}</span>
-                            <span className="tabular-nums">{entry.ppe.toFixed(2)} PPE</span>
-                        </div>
-                        <div className="h-3 bg-pink-100/80 rounded-full overflow-hidden">
-                            <div
-                                className="h-full rounded-full transition-all"
-                                style={{
-                                    width: `${widthPercent}%`,
-                                    backgroundColor: palette[index % palette.length]
-                                }}
-                            />
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
-    );
-};
+const MAX_CONFESSIONALS = 15;
 
 const COMPETITIVE_PLACEMENTS: Placement[] = ['WIN', 'WIN+RTRN', 'WIN+OUT', 'TOP2', 'HIGH', 'SAFE', 'LOW', 'BTM2', 'OUT', 'ELIM'];
 
-const calculatePPE = (trackRecord: Placement[]): number => {
-    const { totalScore, competitiveEpisodes } = trackRecord.reduce(
-        (acc, placement) => {
-            if (COMPETITIVE_PLACEMENTS.includes(placement)) {
-                return {
-                    totalScore: acc.totalScore + (PLACEMENT_POINTS[placement] || 0),
-                    competitiveEpisodes: acc.competitiveEpisodes + 1
-                };
-            }
-            return acc;
-        },
-        { totalScore: 0, competitiveEpisodes: 0 }
-    );
-
-    if (competitiveEpisodes === 0) return 0;
-    return parseFloat((totalScore / competitiveEpisodes).toFixed(2));
+const getEliminationIndex = (queen: Queen): number => {
+    const index = queen.trackRecord.findIndex(placement => placement === 'ELIM' || placement === 'OUT');
+    return index === -1 ? Infinity : index;
 };
 
 const summarizePlacements = (trackRecord: Placement[]) => {
@@ -1111,52 +1214,44 @@ const summarizePlacements = (trackRecord: Placement[]) => {
         lows: 0,
         bottoms: 0,
         elims: 0,
-        ppe: calculatePPE(trackRecord),
+        performanceScore: 0,
         competitiveEpisodes: 0
     };
 
     trackRecord.forEach((placement) => {
+        if (COMPETITIVE_PLACEMENTS.includes(placement)) {
+            summary.performanceScore += PLACEMENT_POINTS[placement] || 0;
+            summary.competitiveEpisodes += 1;
+        }
+
         switch (placement) {
             case 'WIN':
-                summary.wins += 1;
-                summary.competitiveEpisodes += 1;
-                break;
             case 'WIN+RTRN':
                 summary.wins += 1;
-                summary.competitiveEpisodes += 1;
                 break;
             case 'WIN+OUT':
                 summary.wins += 1;
                 summary.elims += 1;
-                summary.competitiveEpisodes += 1;
                 break;
             case 'TOP2':
                 summary.top2 += 1;
-                summary.competitiveEpisodes += 1;
                 break;
             case 'HIGH':
                 summary.highs += 1;
-                summary.competitiveEpisodes += 1;
                 break;
             case 'SAFE':
                 summary.safes += 1;
-                summary.competitiveEpisodes += 1;
                 break;
             case 'LOW':
                 summary.lows += 1;
-                summary.competitiveEpisodes += 1;
                 break;
             case 'BTM2':
                 summary.bottoms += 1;
-                summary.competitiveEpisodes += 1;
                 break;
             case 'OUT':
-                summary.elims += 1;
-                summary.competitiveEpisodes += 1;
-                break;
             case 'ELIM':
                 summary.elims += 1;
-                summary.competitiveEpisodes += 1;
+                summary.bottoms += 1;
                 break;
             default:
                 break;
@@ -1165,8 +1260,6 @@ const summarizePlacements = (trackRecord: Placement[]) => {
 
     return summary;
 };
-
-const formatPPE = (ppe: number) => (Number.isFinite(ppe) ? ppe.toFixed(2) : '0.00');
 
 // --- Main Component ---
 
@@ -1182,7 +1275,7 @@ export default function PokeDragRaceSimulator() {
   const [lipsyncPair, setLipsyncPair] = useState<Queen[]>([]);
   const [producersMode, setProducersMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'game' | 'trackRecord' | 'stats'>('game');
-  const [challengeHistory, setChallengeHistory] = useState<Challenge[]>([]);
+  const [challengeHistory, setChallengeHistory] = useState<ChallengeRecap[]>([]);
   const [doubleShantayUsed, setDoubleShantayUsed] = useState(false);
   const [splitPremiere, setSplitPremiere] = useState(false);
   const [competitionFormat, setCompetitionFormat] = useState<'standard' | 'allStars'>('standard');
@@ -1195,23 +1288,136 @@ export default function PokeDragRaceSimulator() {
       toName: string;
       statBoosts: { stat: StatCategory; amount: number }[];
   } | null>(null);
+  const [suggestedChallenge, setSuggestedChallenge] = useState<Challenge | null>(null);
   const [revengeEpisodeTriggered, setRevengeEpisodeTriggered] = useState(false);
   const [revengeEpisodeActive, setRevengeEpisodeActive] = useState(false);
   const [revengeReturneeIds, setRevengeReturneeIds] = useState<number[]>([]);
   const [revengeTopReturneeIds, setRevengeTopReturneeIds] = useState<number[]>([]);
   const [revengeBottomIds, setRevengeBottomIds] = useState<number[]>([]);
   const [revengePairings, setRevengePairings] = useState<{ returneeId: number; partnerId: number }[]>([]);
+  const [autoSelectCount, setAutoSelectCount] = useState('8');
 
-  const generateChallenge = useCallback((challenge: Challenge) => {
+  const makeConfessional = useCallback((text: string, reason: string, context: ConfessionalContext): ConfessionalEntry => ({
+      text,
+      reason,
+      context,
+      episode: episodeCount
+  }), [episodeCount]);
+
+  const prependConfessional = useCallback((existing: ConfessionalEntry[], entry: ConfessionalEntry) => [entry, ...existing].slice(0, MAX_CONFESSIONALS), []);
+
+  const autoSelectQueens = useCallback(() => {
+      const parsed = parseInt(autoSelectCount, 10);
+      if (Number.isNaN(parsed)) {
+          alert('Enter how many queens you want auto-selected.');
+          return;
+      }
+      const sanitized = Math.max(4, Math.min(parsed, 16, QUEEN_BLUEPRINTS.length));
+      const randomized = [...QUEEN_BLUEPRINTS].sort(() => 0.5 - Math.random()).slice(0, sanitized).map(template => template.id);
+      setSelectedCastIds(randomized);
+      setAutoSelectCount(String(sanitized));
+  }, [autoSelectCount]);
+
+  const generateChallenge = useCallback((challenge: Challenge, options?: { isSuggested?: boolean }) => {
       setCurrentChallenge(challenge);
       setUnsavedPlacements({});
       setLatestResults({});
-      setChallengeHistory(prev => [...prev, challenge]);
-      setCurrentStoryline(`Episode ${episodeCount}: The queens prepare for the ${challenge.name}.`);
+      if (options?.isSuggested) {
+          setSuggestedChallenge(challenge);
+      }
+      const prepPrompts = [
+          `Werkroom buzz: ${challenge.name} has the dolls scrambling to rehearse.`,
+          `Episode ${episodeCount}: The queens whisper about strategies for ${challenge.name}.`,
+          `${challenge.name} rehearsal chaos! Tempers are flaring and wigs are flying.`,
+          `Producers gag: ${challenge.name} is forcing alliances to crack before judging.`,
+          `${challenge.name} is announced and half the room is already plotting revenge.`,
+      ];
+      setCurrentStoryline(prepPrompts[Math.floor(Math.random() * prepPrompts.length)]);
   }, [episodeCount]);
 
-  // --- Derived State ---
   const activeQueens = useMemo(() => cast.filter(q => q.status === 'active'), [cast]);
+
+  const buildChallengeHighlight = useCallback((challenge: Challenge) => {
+      const contenders = [...activeQueens].sort(() => 0.5 - Math.random()).slice(0, 2);
+      const [queenA, queenB] = contenders;
+      const highlightTemplates: Partial<Record<ChallengeType, string[]>> = {
+          acting: [
+              `{queenA} swears her monologue will gag the judges, but {queenB} is rehearsing in secret corners.`,
+              `Line memorization panic! ${challenge.name} is splitting alliances between ${'{queenA}'} and ${'{queenB}'}.`
+          ],
+          comedy: [
+              `{queenA} keeps roasting {queenB} during rehearsal and it's getting personal.`,
+              `{queenA} and {queenB} form a reluctant comedy duo—shenanigans guaranteed.`
+          ],
+          dance: [
+              `{queenA} calls out {queenB} for missing choreography in ${challenge.name}.`,
+              `{queenA}'s high kicks are sending {queenB} into a spiral before ${challenge.name}.`
+          ],
+          design: [
+              `{queenA} hoards fabric while {queenB} is stuck with glitter glue before ${challenge.name}.`,
+              `{queenB} accuses {queenA} of copying her silhouette for ${challenge.name}.`
+          ],
+          improv: [
+              `{queenA} and {queenB} can't agree on a storyline for ${challenge.name}.`,
+              `Improv chaos! {queenA} keeps breaking character while {queenB} fumes.`
+          ],
+          makeover: [
+              `{queenA}'s makeover partner is flirting with {queenB}—werkroom tension rising.`,
+              `Makeover mayhem: {queenB} won't share lashes with {queenA}.`
+          ],
+          rusical: [
+              `{queenA} lands the lead in ${challenge.name} and {queenB} is plotting a sabotage.`,
+              `Harmony or havoc? {queenA} and {queenB} argue over key changes for ${challenge.name}.`
+          ],
+          rumix: [
+              `{queenA} refuses to share her verse with anyone before ${challenge.name}.`,
+              `{queenB} thinks {queenA}'s verse is messy and says so in front of the choreographer.`
+          ],
+          snatch_game: [
+              `{queenA} thinks {queenB}'s character choice is a flop and isn't hiding it.`,
+              `Snatch Game smack talk! {queenA} and {queenB} trade reads during rehearsal.`
+          ],
+          roast: [
+              `{queenA} writes savage jokes about {queenB} and she overhears every single one.`,
+              `{queenB} is convinced {queenA} will bomb the roast and is stirring the pot.`
+          ],
+          talent: [
+              `{queenA} unveils a pyrotechnic gag while {queenB} questions her life choices.`,
+              `Talent show rivalries ignite between {queenA} and {queenB} backstage.`
+          ],
+          branding: [
+              `{queenA} says {queenB}'s product smells like Muk sludge—shade before ${challenge.name}.`,
+              `{queenB} and {queenA} accidentally pitch the same brand concept. Awkward!`
+          ],
+          girl_groups: [
+              `{queenA} refuses to sing harmonies, leaving {queenB} to clean up the vocals.`,
+              `Girl group drama erupts when {queenB} rewrites {queenA}'s verse.`
+          ],
+          ball: [
+              `{queenA} steals the best fabric bolt and {queenB} is fuming before the ball.`,
+              `Three looks, zero chill—{queenA} and {queenB} are racing to finish for ${challenge.name}.`
+          ]
+      };
+      const defaults = [
+          `{queenA} is plotting a power move while {queenB} confides in the cameras about the pressure of ${challenge.name}.`,
+          `${challenge.name} is splitting the werkroom—{queenA} and {queenB} are on the brink of a feud.`
+      ];
+      const options = highlightTemplates[challenge.type] ?? defaults;
+      const template = options[Math.floor(Math.random() * options.length)] ?? defaults[0];
+      const queenAName = queenA?.name ?? 'One queen';
+      const queenBName = queenB?.name ?? 'another queen';
+      const filled = template
+          .replace('{queenA}', queenAName)
+          .replace('{queenB}', queenBName)
+          .replace('{challenge}', challenge.name);
+      return `Episode ${episodeCount}: ${filled}`;
+  }, [activeQueens, episodeCount]);
+
+  // --- Derived State ---
+  const challengePreviewStory = useMemo(
+      () => (currentChallenge ? buildChallengeHighlight(currentChallenge) : ''),
+      [currentChallenge, buildChallengeHighlight]
+  );
   useEffect(() => {
       if (competitionFormat === 'allStars' && splitPremiere) {
           setSplitPremiere(false);
@@ -1346,6 +1552,8 @@ export default function PokeDragRaceSimulator() {
               ? 'The workroom is buzzing—fresh forms are ready to evolve!'
               : 'The werkroom is quiet... for now.';
       setCurrentStoryline(setupLine);
+      setCurrentChallenge(null);
+      setSuggestedChallenge(null);
       setChallengeHistory([]);
       setDoubleShantayUsed(false);
       setPendingLegacyElimination(null);
@@ -1367,7 +1575,19 @@ export default function PokeDragRaceSimulator() {
           setPhase('PROMO'); 
           break;
       case 'PROMO': setPhase('CHALLENGE_SELECTION'); break;
-      case 'CHALLENGE_SELECTION': setPhase('CHALLENGE_INTRO'); break;
+      case 'CHALLENGE_SELECTION':
+        if (!currentChallenge) {
+            setCurrentStoryline('Select a challenge before proceeding.');
+            break;
+        }
+        const highlight = challengePreviewStory || buildChallengeHighlight(currentChallenge);
+        setChallengeHistory(prev => {
+            const filtered = prev.filter(entry => entry.episode !== episodeCount);
+            return [...filtered, { episode: episodeCount, challenge: currentChallenge, highlight }];
+        });
+        setCurrentStoryline(highlight);
+        setPhase('CHALLENGE_INTRO');
+        break;
       case 'CHALLENGE_INTRO': setPhase('PERFORMANCE'); break;
       case 'PERFORMANCE':
         generateInitialPlacements();
@@ -1416,6 +1636,22 @@ export default function PokeDragRaceSimulator() {
           }
       }
   }, [revengeEpisodeActive, phase, currentChallenge, generateChallenge]);
+
+  useEffect(() => {
+      if (phase !== 'CHALLENGE_SELECTION' || revengeEpisodeActive) {
+          return;
+      }
+      const available = CHALLENGES.filter(challenge => !splitPremiere || episodeCount > 2 || challenge.isPremiereFriendly);
+      if (available.length === 0) {
+          return;
+      }
+      const suggestion = available[Math.floor(Math.random() * available.length)];
+      if (!currentChallenge || currentChallenge.name !== suggestion.name) {
+          generateChallenge(suggestion, { isSuggested: true });
+      } else if (!suggestedChallenge || suggestedChallenge.name !== suggestion.name) {
+          setSuggestedChallenge(suggestion);
+      }
+  }, [phase, revengeEpisodeActive, splitPremiere, episodeCount, currentChallenge, suggestedChallenge, generateChallenge]);
 
   const generateInitialPlacements = () => {
     if (!currentChallenge) return;
@@ -1600,11 +1836,18 @@ export default function PokeDragRaceSimulator() {
           paddedRecord.push('N/A');
       }
       const updatedRecord = [...paddedRecord, placement];
-      const newConfessional = getConfessional(q, confessionalPlacement, 'JUDGING', currentChallenge?.type, currentEpisodeQueens);
+      const newConfessional = getConfessional(
+          q,
+          confessionalPlacement,
+          'JUDGING',
+          episodeCount,
+          currentChallenge ?? undefined,
+          currentEpisodeQueens
+      );
       return {
         ...q,
         trackRecord: updatedRecord,
-        confessionals: [newConfessional, ...q.confessionals].slice(0, 10)
+        confessionals: prependConfessional(q.confessionals, newConfessional)
       };
     }));
     setProducersMode(false);
@@ -1626,9 +1869,18 @@ export default function PokeDragRaceSimulator() {
         const topics = [
             `said ${victim.name} should definitely go home tonight`,
             `called out ${victim.name} for having the same silhouette every runway`,
-            `asked ${victim.name} why she even bothered showing up today`
+            `asked ${victim.name} why she even bothered showing up today`,
+            `exposed that ${victim.name} was trash-talking alliances with the producers`,
+            `brought up that ${victim.name} borrowed a wig and returned it ruined`
         ];
         setCurrentStoryline(`Untucked: The drama! ${instigator.name} ${topics[Math.floor(Math.random() * topics.length)]}.`);
+    } else if (safeQueens.length > 1 && Math.random() > 0.5) {
+        const conspirators = [...safeQueens].sort(() => 0.5 - Math.random()).slice(0, 2);
+        if (conspirators.length === 2) {
+            setCurrentStoryline(`Untucked: ${conspirators[0].name} and ${conspirators[1].name} plot a secret alliance before the next challenge.`);
+        } else {
+            setCurrentStoryline(`Untucked: ${safeQueens[0].name} is gossiping with the producers about a surprise twist.`);
+        }
     } else {
         setCurrentStoryline("Untucked: Everyone is being fake nice. It's suspicious.");
     }
@@ -1676,7 +1928,14 @@ export default function PokeDragRaceSimulator() {
             personality: toForm.personality,
             entranceLine: toForm.entranceLine,
             evolutionStage: nextStage,
-            confessionals: [`Did you clock that glow up? ${fromForm.name} just became ${toForm.name}.`, ...q.confessionals].slice(0, 10)
+            confessionals: prependConfessional(
+                q.confessionals,
+                makeConfessional(
+                    `Did you clock that glow up? ${fromForm.name} just became ${toForm.name}.`,
+                    'Evolution milestone celebration',
+                    'evolution'
+                )
+            )
         };
     }));
 
@@ -1751,10 +2010,14 @@ export default function PokeDragRaceSimulator() {
                     ...q,
                     status: 'active',
                     trackRecord: tr,
-                    confessionals: [
-                        "I'm back in the race and ready to slay!",
-                        ...q.confessionals
-                    ].slice(0, 10)
+                    confessionals: prependConfessional(
+                        q.confessionals,
+                        makeConfessional(
+                            "I'm back in the race and ready to slay!",
+                            'Legacy challenge triumph',
+                            'legacy'
+                        )
+                    )
                 };
             }
             if (losingReturneeIds.includes(q.id)) {
@@ -1764,10 +2027,14 @@ export default function PokeDragRaceSimulator() {
                     ...q,
                     status: 'eliminated',
                     trackRecord: tr,
-                    confessionals: [
-                        "I won the challenge but still have to sashay away... again!",
-                        ...q.confessionals
-                    ].slice(0, 10)
+                    confessionals: prependConfessional(
+                        q.confessionals,
+                        makeConfessional(
+                            "I won the challenge but still have to sashay away... again!",
+                            'Return challenge heartbreak',
+                            'legacy'
+                        )
+                    )
                 };
             }
             if (partnerIds.includes(q.id)) {
@@ -1776,10 +2043,14 @@ export default function PokeDragRaceSimulator() {
                 return {
                     ...q,
                     trackRecord: tr,
-                    confessionals: [
-                        "My returning sister and I just snatched that victory!",
-                        ...q.confessionals
-                    ].slice(0, 10)
+                    confessionals: prependConfessional(
+                        q.confessionals,
+                        makeConfessional(
+                            "My returning sister and I just snatched that victory!",
+                            'Paired victory celebration',
+                            'challenge'
+                        )
+                    )
                 };
             }
             if (nonReturningIds.includes(q.id)) {
@@ -1789,10 +2060,14 @@ export default function PokeDragRaceSimulator() {
                     ...q,
                     status: 'eliminated',
                     trackRecord: tr,
-                    confessionals: [
-                        "I gave it my all, but the comeback wasn't in the cards.",
-                        ...q.confessionals
-                    ].slice(0, 10)
+                    confessionals: prependConfessional(
+                        q.confessionals,
+                        makeConfessional(
+                            "I gave it my all, but the comeback wasn't in the cards.",
+                            'Eliminated after revenge twist',
+                            'legacy'
+                        )
+                    )
                 };
             }
             return q;
@@ -1860,7 +2135,14 @@ export default function PokeDragRaceSimulator() {
                 return {
                     ...q,
                     trackRecord: tr,
-                    confessionals: ["Legendary win! Time to make a power move.", ...q.confessionals].slice(0, 10)
+                    confessionals: prependConfessional(
+                        q.confessionals,
+                        makeConfessional(
+                            'Legendary win! Time to make a power move.',
+                            'Lip sync for your legacy victory',
+                            'lipSync'
+                        )
+                    )
                 };
             }
             return q;
@@ -1887,7 +2169,18 @@ export default function PokeDragRaceSimulator() {
           // Upgrade TOP2 to WIN
            const tr = [...q.trackRecord];
            tr[tr.length - 1] = 'WIN';
-           return { ...q, trackRecord: tr, confessionals: ["I got that premiere win, baby! The others better watch out.", ...q.confessionals].slice(0,10) };
+           return {
+               ...q,
+               trackRecord: tr,
+               confessionals: prependConfessional(
+                   q.confessionals,
+                   makeConfessional(
+                       'I got that premiere win, baby! The others better watch out.',
+                       'Split premiere lip sync victory',
+                       'lipSync'
+                   )
+               )
+           };
       }
       if (q.id === loserId && !isSplitNonElim) {
         // Eliminate
@@ -1938,7 +2231,7 @@ export default function PokeDragRaceSimulator() {
 
       finalists.forEach(f => {
           const summary = summarizePlacements(f.trackRecord);
-          let score = summary.ppe * 10;
+          let score = summary.performanceScore;
           score += summary.wins * 3 + summary.top2 * 2 + summary.highs;
           score -= summary.bottoms;
           score += Math.random() * 6; // sprinkle of chaos
@@ -2017,8 +2310,10 @@ export default function PokeDragRaceSimulator() {
     );
   };
 
-  const GameScreen = () => (
-    <div className="flex flex-col h-full">
+  const GameScreen = () => {
+    const proceedDisabled = (phase === 'ELIMINATION' && !!pendingLegacyElimination) || (phase === 'CHALLENGE_SELECTION' && !currentChallenge);
+    return (
+      <div className="flex flex-col h-full">
       {/* Phase Indicator */}
       <div className="bg-pink-800 text-white p-4 text-center font-bold text-2xl uppercase tracking-widest flex justify-between items-center shadow-md">
          <span className="text-pink-200">S1 | Ep {episodeCount}</span>
@@ -2111,6 +2406,26 @@ export default function PokeDragRaceSimulator() {
                             className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${seasonMode === 'evolve' ? 'bg-emerald-500 text-white shadow-md' : 'text-emerald-500 hover:bg-emerald-50'}`}
                         >
                             Evolution Journey
+                        </button>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-white px-4 py-3 rounded-2xl shadow-inner border border-pink-100">
+                        <div className="flex items-center space-x-2">
+                            <label className="text-xs uppercase tracking-widest font-semibold text-pink-600">Auto Cast</label>
+                            <input
+                                type="number"
+                                min={4}
+                                max={16}
+                                value={autoSelectCount}
+                                onChange={e => setAutoSelectCount(e.target.value)}
+                                className="w-20 rounded-full border border-pink-200 px-3 py-1 text-sm text-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-400"
+                            />
+                        </div>
+                        <button
+                            onClick={autoSelectQueens}
+                            className="flex items-center justify-center space-x-2 bg-pink-600 hover:bg-pink-700 text-white text-sm font-bold px-4 py-2 rounded-full shadow-sm"
+                        >
+                            <Sparkles size={16} />
+                            <span>Randomly pick {autoSelectCount}</span>
                         </button>
                     </div>
                     <div className="text-xs uppercase tracking-widest text-gray-500 space-y-1">
@@ -2246,29 +2561,87 @@ export default function PokeDragRaceSimulator() {
                     </div>
                 </div>
             ) : (
-                <>
-                    <h2 className="text-4xl font-extrabold text-pink-900 text-center mb-8 flex items-center justify-center"><Star className="mr-3 text-yellow-400" fill="currentColor" /> Select Next Challenge</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {CHALLENGES.filter(c => !splitPremiere || episodeCount > 2 || c.isPremiereFriendly).map((challenge, idx) => (
-                        <button
-                            key={idx}
-                            onClick={() => generateChallenge(challenge)}
-                            className="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-pink-400 flex flex-col items-center text-center group"
-                        >
-                          <div className="bg-pink-50 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
-                              {challenge.icon}
-                          </div>
-                          <h3 className="font-bold text-xl text-gray-800 mb-2">{challenge.name}</h3>
-                          <p className="text-sm text-gray-500 mb-4 line-clamp-2">{challenge.description}</p>
-                          <div className="flex flex-wrap justify-center gap-2 mt-auto">
-                            {challenge.primaryStats.map(stat => (
-                              <span key={stat} className="bg-pink-100 text-pink-800 px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wider">{stat}</span>
-                            ))}
-                          </div>
-                        </button>
-                      ))}
+                <div className="space-y-8">
+                    <div className="text-center">
+                        <h2 className="text-4xl font-extrabold text-pink-900 mb-4 flex items-center justify-center"><Star className="mr-3 text-yellow-400" fill="currentColor" /> Select Next Challenge</h2>
+                        <p className="text-sm text-pink-700 max-w-2xl mx-auto">Pick the next blockbuster challenge. A suggestion is ready, but producers live for a gag—switch it up if you dare.</p>
                     </div>
-                </>
+                    {currentChallenge && (
+                        <div className="bg-white rounded-3xl border border-pink-100 shadow-xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                            <div className="flex items-center space-x-4">
+                                <div className="bg-pink-50 p-4 rounded-2xl">
+                                    {React.isValidElement(currentChallenge.icon)
+                                        ? React.cloneElement(currentChallenge.icon as React.ReactElement, { size: 56 })
+                                        : currentChallenge.icon}
+                                </div>
+                                <div className="text-left">
+                                    <div className="text-[10px] uppercase tracking-[0.4em] text-pink-500 font-semibold">
+                                        {suggestedChallenge && currentChallenge.name === suggestedChallenge.name ? 'Suggested Pick' : 'Selected Challenge'}
+                                    </div>
+                                    <h3 className="text-2xl font-extrabold text-pink-900">{currentChallenge.name}</h3>
+                                    <p className="text-sm text-gray-600 mt-2 max-w-xl">{currentChallenge.description}</p>
+                                    <div className="flex flex-wrap gap-2 mt-3">
+                                        {currentChallenge.primaryStats.map(stat => (
+                                            <span key={stat} className="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">{stat}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-pink-50/70 border border-pink-100 rounded-2xl p-4 text-left text-sm text-pink-800 shadow-inner">
+                                <p className="font-semibold uppercase tracking-widest text-[11px] text-pink-500 mb-1">Producer Notes</p>
+                                <p>{challengePreviewStory || buildChallengeHighlight(currentChallenge)}</p>
+                            </div>
+                        </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {CHALLENGES.filter(c => !splitPremiere || episodeCount > 2 || c.isPremiereFriendly).map(challenge => {
+                            const isSelected = currentChallenge?.name === challenge.name;
+                            const isSuggested = suggestedChallenge?.name === challenge.name;
+                            return (
+                                <button
+                                    key={challenge.name}
+                                    onClick={() => generateChallenge(challenge)}
+                                    className={`relative bg-white rounded-2xl p-6 shadow-md transition-all flex flex-col items-center text-center group border-2 ${isSelected ? 'border-pink-500 shadow-xl scale-[1.02]' : 'border-transparent hover:border-pink-400 hover:shadow-lg'} ${isSuggested ? 'ring-2 ring-pink-200' : ''}`}
+                                >
+                                    {isSuggested && (
+                                        <span className="absolute top-3 left-3 text-[10px] uppercase tracking-widest bg-pink-100 text-pink-600 px-2 py-1 rounded-full border border-pink-200">Suggested</span>
+                                    )}
+                                    {isSelected && (
+                                        <span className="absolute top-3 right-3 text-[10px] uppercase tracking-widest bg-pink-600 text-white px-2 py-1 rounded-full shadow">Selected</span>
+                                    )}
+                                    <div className="bg-pink-50 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
+                                        {challenge.icon}
+                                    </div>
+                                    <h3 className="font-bold text-xl text-gray-800 mb-2">{challenge.name}</h3>
+                                    <p className="text-sm text-gray-500 mb-4 line-clamp-2">{challenge.description}</p>
+                                    <div className="flex flex-wrap justify-center gap-2 mt-auto">
+                                        {challenge.primaryStats.map(stat => (
+                                            <span key={stat} className="bg-pink-100 text-pink-800 px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wider">{stat}</span>
+                                        ))}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="bg-white rounded-3xl border border-pink-100 shadow-xl p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-2xl font-bold text-pink-900 flex items-center"><Clapperboard className="mr-3 text-pink-500" /> Season Story So Far</h3>
+                            <span className="text-xs uppercase tracking-widest text-pink-500">Episodes {challengeHistory.length ? challengeHistory.length : 0}</span>
+                        </div>
+                        {challengeHistory.length === 0 ? (
+                            <div className="text-sm text-gray-500">No challenges have aired yet. Producers are thirsty for drama.</div>
+                        ) : (
+                            <div className="space-y-4 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                                {[...challengeHistory].sort((a, b) => b.episode - a.episode).map(entry => (
+                                    <div key={`${entry.episode}-${entry.challenge.name}`} className="bg-pink-50/70 border border-pink-100 rounded-2xl p-4 text-left shadow-sm">
+                                        <div className="text-xs uppercase tracking-widest text-pink-500 font-semibold">Episode {entry.episode} • {entry.challenge.name}</div>
+                                        <p className="text-sm text-pink-800 mt-1">{entry.highlight}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
             )}
           </div>
         )}
@@ -2342,7 +2715,7 @@ export default function PokeDragRaceSimulator() {
                                             <img src={getQueenImg(queen.dexId)} className="w-10 h-10 rounded-full border border-gray-600" />
                                             <div>
                                                 <span className="font-bold text-sm">{queen.name}</span>
-                                                <div className="text-[10px] uppercase tracking-widest text-gray-300">PPE {formatPPE(summary.ppe)} • Wins {summary.wins} • Bottoms {summary.bottoms}</div>
+                                                <div className="text-[10px] uppercase tracking-widest text-gray-300">Wins {summary.wins} • High Placements {summary.highs + summary.top2} • Bottoms {summary.bottoms}</div>
                                             </div>
                                         </div>
                                         <select
@@ -2467,7 +2840,7 @@ export default function PokeDragRaceSimulator() {
                             </div>
                             <p className="text-sm uppercase tracking-[0.5em] text-pink-500">Main Stage Verdict</p>
                             <h2 className="text-4xl font-extrabold text-pink-900">{headline}</h2>
-                            <p className="text-gray-600 max-w-3xl mx-auto">Episode {episodeCount} • {currentChallenge?.name || 'Main Stage Extravaganza'} • PPE insights updated</p>
+                            <p className="text-gray-600 max-w-3xl mx-auto">Episode {episodeCount} • {currentChallenge?.name || 'Main Stage Extravaganza'} • Momentum report refreshed</p>
                         </div>
                     </div>
 
@@ -2475,15 +2848,18 @@ export default function PokeDragRaceSimulator() {
                         {winners.length > 0 && (
                             <div className="bg-gradient-to-br from-yellow-300 via-amber-200 to-yellow-100 rounded-3xl p-6 shadow-xl border border-yellow-400/60">
                                 <h3 className="text-xs uppercase tracking-widest text-yellow-700">Episode Winner</h3>
-                                {winners.map(({ queen }) => (
-                                    <div key={queen.id} className="flex items-center space-x-3 mt-3">
-                                        <img src={getQueenImg(queen.dexId)} className="w-14 h-14 rounded-full border-2 border-yellow-500 bg-white" />
-                                        <div>
-                                            <div className="font-bold text-lg text-yellow-900">{queen.name}</div>
-                                            <div className="text-xs uppercase tracking-widest text-yellow-700">PPE {formatPPE(calculatePPE(queen.trackRecord))}</div>
+                                {winners.map(({ queen }) => {
+                                    const summary = summarizePlacements(queen.trackRecord);
+                                    return (
+                                        <div key={queen.id} className="flex items-center space-x-3 mt-3">
+                                            <img src={getQueenImg(queen.dexId)} className="w-14 h-14 rounded-full border-2 border-yellow-500 bg-white" />
+                                            <div>
+                                                <div className="font-bold text-lg text-yellow-900">{queen.name}</div>
+                                                <div className="text-xs uppercase tracking-widest text-yellow-700">Season tally: {summary.wins} win{summary.wins === 1 ? '' : 's'} • {summary.highs + summary.top2} high placements</div>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                         {topTwo.length > 0 && (
@@ -2533,21 +2909,24 @@ export default function PokeDragRaceSimulator() {
                             <Sparkles className="text-pink-400" />
                         </div>
                         <div className="divide-y divide-pink-50">
-                            {entries.map(({ queen, placement }) => (
-                                <div key={queen.id} className="flex flex-col md:flex-row md:items-center md:justify-between px-6 py-4 gap-3">
-                                    <div className="flex items-center space-x-3">
-                                        <img src={getQueenImg(queen.dexId)} className="w-12 h-12 rounded-full border-2 border-pink-200" />
-                                        <div>
-                                            <div className="font-bold text-pink-900">{queen.name}</div>
-                                            <div className="text-xs text-gray-500 uppercase tracking-widest">PPE {formatPPE(calculatePPE(queen.trackRecord))}</div>
+                            {entries.map(({ queen, placement }) => {
+                                const summary = summarizePlacements(queen.trackRecord);
+                                return (
+                                    <div key={queen.id} className="flex flex-col md:flex-row md:items-center md:justify-between px-6 py-4 gap-3">
+                                        <div className="flex items-center space-x-3">
+                                            <img src={getQueenImg(queen.dexId)} className="w-12 h-12 rounded-full border-2 border-pink-200" />
+                                            <div>
+                                                <div className="font-bold text-pink-900">{queen.name}</div>
+                                                <div className="text-xs text-gray-500 uppercase tracking-widest">Season recap: {summary.wins} wins • {summary.bottoms} bottom placements</div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center space-x-4">
+                                            <MiniTrackRecord trackRecord={queen.trackRecord} />
+                                            <PlacementBadge placement={placement} />
                                         </div>
                                     </div>
-                                    <div className="flex items-center space-x-4">
-                                        <MiniTrackRecord trackRecord={queen.trackRecord} />
-                                        <PlacementBadge placement={placement} />
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -2663,7 +3042,7 @@ export default function PokeDragRaceSimulator() {
                                 <img src={getQueenImg(option.dexId)} className="w-24 h-24 bg-purple-50 rounded-full border-2 border-purple-200" />
                                 <h3 className="text-xl font-bold text-purple-800">{option.name}</h3>
                                 <MiniTrackRecord trackRecord={option.trackRecord} />
-                                <div className="text-sm font-semibold text-purple-600">PPE {formatPPE(summary.ppe)}</div>
+                                <div className="text-sm font-semibold text-purple-600">Momentum: {summary.wins} win{summary.wins === 1 ? '' : 's'} • {summary.highs + summary.top2} high call-out{summary.highs + summary.top2 === 1 ? '' : 's'}</div>
                                 <div className="text-xs text-gray-500 uppercase tracking-wide">Wins {summary.wins} • Bottoms {summary.bottoms}</div>
                                 <span className="text-xs font-bold text-white bg-purple-500 px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">Select to Eliminate</span>
                             </button>
@@ -2719,26 +3098,64 @@ export default function PokeDragRaceSimulator() {
           {['PROMO','ENTRANCES','CHALLENGE_SELECTION','CHALLENGE_INTRO','PERFORMANCE','JUDGING','RESULTS','UNTUCKED','ELIMINATION'].includes(phase) && (
              <button
                onClick={nextPhase}
-               disabled={phase === 'ELIMINATION' && !!pendingLegacyElimination}
-               className={`bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-10 rounded-full text-lg flex items-center transition-transform ${phase === 'ELIMINATION' && pendingLegacyElimination ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'}`}
+               disabled={proceedDisabled}
+               className={`bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-10 rounded-full text-lg flex items-center transition-transform ${proceedDisabled ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'}`}
              >
                PROCEED <Sparkles size={20} className="ml-2"/>
              </button>
           )}
         </div>
       )}
-    </div>
-  );
+      </div>
+    );
+  };
 
   const TrackRecordTab = () => {
-    // Sort: Winner, Runner-ups, then by elimination order (latest elim first)
+    const summaryMap = new Map<number, ReturnType<typeof summarizePlacements>>();
+    cast.forEach(queen => {
+        summaryMap.set(queen.id, summarizePlacements(queen.trackRecord));
+    });
+
+    const placementPriority = (queen: Queen) => {
+        switch (queen.status) {
+            case 'winner':
+                return 0;
+            case 'runner-up':
+                return 1;
+            case 'active':
+                return 2;
+            default:
+                return 3;
+        }
+    };
+
     const sortedCast = cast.slice().sort((a, b) => {
-        if (a.status === 'winner') return -1;
-        if (b.status === 'winner') return 1;
-        if (a.status === 'runner-up') return -1;
-        if (b.status === 'runner-up') return 1;
-        // Both eliminated or active (mid-season)
-        return b.trackRecord.length - a.trackRecord.length;
+        const priorityA = placementPriority(a);
+        const priorityB = placementPriority(b);
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+        }
+
+        if (priorityA === 2) {
+            const summaryA = summaryMap.get(a.id)!;
+            const summaryB = summaryMap.get(b.id)!;
+            return (
+                summaryB.performanceScore - summaryA.performanceScore ||
+                summaryB.wins - summaryA.wins ||
+                summaryB.highs + summaryB.top2 - (summaryA.highs + summaryA.top2) ||
+                a.name.localeCompare(b.name)
+            );
+        }
+
+        if (priorityA === 3) {
+            const elimDiff = getEliminationIndex(b) - getEliminationIndex(a);
+            if (elimDiff !== 0) {
+                return elimDiff;
+            }
+            return a.name.localeCompare(b.name);
+        }
+
+        return a.name.localeCompare(b.name);
     });
 
     const maxEpisodes = Math.max(
@@ -2746,11 +3163,22 @@ export default function PokeDragRaceSimulator() {
         cast.reduce((max, q) => Math.max(max, q.trackRecord.length), 0)
     );
 
-    const queenSummaries = sortedCast.map(queen => ({ queen, summary: summarizePlacements(queen.trackRecord) }));
+    const queenSummaries = sortedCast.map(queen => ({ queen, summary: summaryMap.get(queen.id)! }));
 
-    const topWins = queenSummaries.slice().sort((a, b) => (b.summary.wins - a.summary.wins) || (b.summary.ppe - a.summary.ppe))[0];
-    const topPPE = queenSummaries.slice().sort((a, b) => b.summary.ppe - a.summary.ppe)[0];
-    const lipSyncHero = queenSummaries.slice().sort((a, b) => b.summary.bottoms - a.summary.bottoms)[0];
+    const topWins = queenSummaries.slice().sort((a, b) =>
+        (b.summary.wins - a.summary.wins) ||
+        (b.summary.highs + b.summary.top2) - (a.summary.highs + a.summary.top2) ||
+        (b.summary.performanceScore - a.summary.performanceScore)
+    )[0];
+    const judgesFavorite = queenSummaries.slice().sort((a, b) =>
+        (b.summary.highs + b.summary.top2) - (a.summary.highs + a.summary.top2) ||
+        (b.summary.wins - a.summary.wins) ||
+        (b.summary.performanceScore - a.summary.performanceScore)
+    )[0];
+    const lipSyncHero = queenSummaries.slice().sort((a, b) =>
+        (b.summary.bottoms - a.summary.bottoms) ||
+        (b.summary.performanceScore - a.summary.performanceScore)
+    )[0];
 
     return (
       <div className="p-8 bg-pink-50 h-full overflow-auto space-y-6">
@@ -2762,21 +3190,21 @@ export default function PokeDragRaceSimulator() {
                 accent="bg-gradient-to-r from-pink-500 to-rose-500"
                 queen={topWins?.queen}
                 value={topWins ? `${topWins.summary.wins} win${topWins.summary.wins === 1 ? '' : 's'}` : '—'}
-                subtext={topWins ? `PPE ${formatPPE(topWins.summary.ppe)}` : 'Pending results'}
+                subtext={topWins ? `${topWins.summary.highs + topWins.summary.top2} high placements • ${topWins.summary.bottoms} bottom${topWins.summary.bottoms === 1 ? '' : 's'}` : 'Pending results'}
             />
             <SeasonHighlightCard
-                title="Best PPE"
+                title="Judges' Favorite"
                 accent="bg-gradient-to-r from-purple-500 to-indigo-500"
-                queen={topPPE?.queen}
-                value={topPPE ? formatPPE(topPPE.summary.ppe) : '0.00'}
-                subtext={topPPE ? `${topPPE.summary.wins} wins • ${topPPE.summary.highs} highs` : 'Keep watching!'}
+                queen={judgesFavorite?.queen}
+                value={judgesFavorite ? `${judgesFavorite.summary.highs + judgesFavorite.summary.top2} top call-out${judgesFavorite.summary.highs + judgesFavorite.summary.top2 === 1 ? '' : 's'}` : '—'}
+                subtext={judgesFavorite ? `${judgesFavorite.summary.wins} wins • ${judgesFavorite.summary.safes} safes` : 'Keep watching!'}
             />
             <SeasonHighlightCard
                 title="Lip Sync Assassin"
                 accent="bg-gradient-to-r from-amber-500 to-orange-500"
                 queen={lipSyncHero?.queen}
                 value={lipSyncHero ? `${lipSyncHero.summary.bottoms} lip sync${lipSyncHero.summary.bottoms === 1 ? '' : 's'}` : '0'}
-                subtext={lipSyncHero ? `SAFE ${lipSyncHero.summary.safes} • LOW ${lipSyncHero.summary.lows}` : 'No data yet'}
+                subtext={lipSyncHero ? `${lipSyncHero.summary.wins} wins • ${lipSyncHero.summary.lows} low moment${lipSyncHero.summary.lows === 1 ? '' : 's'}` : 'No data yet'}
             />
         </div>
 
@@ -2788,11 +3216,6 @@ export default function PokeDragRaceSimulator() {
                 {Array.from({ length: maxEpisodes }).map((_, i) => (
                   <th key={i} className="p-4 text-center">Ep {i + 1}</th>
                 ))}
-                <th className="p-4 text-center">PPE</th>
-                <th className="p-4 text-center">Wins</th>
-                <th className="p-4 text-center">High</th>
-                <th className="p-4 text-center">Low</th>
-                <th className="p-4 text-center">Bottom</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-pink-100">
@@ -2808,13 +3231,15 @@ export default function PokeDragRaceSimulator() {
                   <tr key={queen.id} className={`${rowAccent} transition-colors hover:bg-pink-100/70`}>
                     <td className="p-4">
                       <div className="flex items-center space-x-3">
-                        <img src={getQueenImg(queen.dexId)} className="w-12 h-12 bg-gray-100 rounded-full border-2 border-pink-200" />
+                        <div className="w-16 h-16 bg-gray-100 rounded-full border-2 border-pink-200 shadow-md overflow-hidden">
+                          <img src={getQueenImg(queen.dexId)} className="w-full h-full object-cover transform scale-110" />
+                        </div>
                         <div>
                           <div className="font-bold text-pink-900 flex items-center space-x-2">
                             <span>{queen.name}</span>
                             {queen.status === 'winner' && <Crown size={18} className="text-yellow-500" />}
                           </div>
-                          <div className="text-xs uppercase tracking-widest text-pink-500">PPE {formatPPE(summary.ppe)}</div>
+                          <div className="text-xs uppercase tracking-widest text-pink-500">{summary.wins} wins • {summary.highs + summary.top2} highs • {summary.bottoms} bottoms</div>
                         </div>
                       </div>
                     </td>
@@ -2828,11 +3253,6 @@ export default function PokeDragRaceSimulator() {
                             </td>
                         );
                     })}
-                    <td className="p-3 text-center font-semibold text-pink-700">{formatPPE(summary.ppe)}</td>
-                    <td className="p-3 text-center">{summary.wins}</td>
-                    <td className="p-3 text-center">{summary.highs + summary.top2}</td>
-                    <td className="p-3 text-center">{summary.lows}</td>
-                    <td className="p-3 text-center">{summary.bottoms}</td>
                   </tr>
                 );
               })}
@@ -2845,15 +3265,28 @@ export default function PokeDragRaceSimulator() {
 
   const StatsTab = () => {
       const queenSummaries = useMemo(() => cast.map(queen => ({ queen, summary: summarizePlacements(queen.trackRecord) })), [cast]);
-      const leaderboard = queenSummaries.filter(({ summary }) => summary.competitiveEpisodes > 0).sort((a, b) => b.summary.ppe - a.summary.ppe).slice(0, 5);
-      const chartData = queenSummaries.filter(({ summary }) => summary.competitiveEpisodes > 0).map(({ queen, summary }) => ({
-          name: queen.name.split(' ')[0],
-          fullName: queen.name,
-          ppe: parseFloat(formatPPE(summary.ppe))
-      }));
-      const eliminationOrder = cast.filter(q => q.status === 'eliminated').sort((a, b) => a.trackRecord.length - b.trackRecord.length);
-
-      const chartPalette = ['#f472b6', '#c084fc', '#60a5fa', '#fb7185', '#facc15', '#34d399', '#fbbf24'];
+      const leaderboard = queenSummaries
+          .filter(({ summary }) => summary.competitiveEpisodes > 0)
+          .sort((a, b) => {
+              const scoreA = (a.summary.wins * 5) + ((a.summary.highs + a.summary.top2) * 3) - (a.summary.bottoms * 2);
+              const scoreB = (b.summary.wins * 5) + ((b.summary.highs + b.summary.top2) * 3) - (b.summary.bottoms * 2);
+              if (scoreB !== scoreA) return scoreB - scoreA;
+              return (b.summary.wins - a.summary.wins) || ((b.summary.highs + b.summary.top2) - (a.summary.highs + a.summary.top2)) || a.queen.name.localeCompare(b.queen.name);
+          })
+          .slice(0, 5);
+      const eliminationOrder = cast
+          .filter(q => q.status === 'eliminated')
+          .sort((a, b) => getEliminationIndex(a) - getEliminationIndex(b));
+      const recentStories = [...challengeHistory].sort((a, b) => b.episode - a.episode).slice(0, 3);
+      const confessionalsFeed = cast
+          .flatMap(queen => queen.confessionals.map((conf, index) => ({ queen, conf, index })))
+          .sort((a, b) => {
+              if (b.conf.episode !== a.conf.episode) {
+                  return b.conf.episode - a.conf.episode;
+              }
+              return a.index - b.index;
+          })
+          .slice(0, 20);
 
       return (
         <div className="p-8 bg-pink-50 h-full overflow-auto space-y-8">
@@ -2877,7 +3310,7 @@ export default function PokeDragRaceSimulator() {
                                   <img src={getQueenImg(queen.dexId)} className="w-12 h-12 rounded-full border-2 border-pink-200" />
                                   <div>
                                       <div className="font-bold text-pink-900">{queen.name}</div>
-                                      <div className="text-xs uppercase tracking-widest text-pink-500">PPE {formatPPE(summary.ppe)} • Wins {summary.wins}</div>
+                                      <div className="text-xs uppercase tracking-widest text-pink-500">Hot streak: {summary.wins} wins • {summary.highs + summary.top2} highs</div>
                                       <MiniTrackRecord trackRecord={queen.trackRecord} />
                                   </div>
                               </div>
@@ -2891,10 +3324,19 @@ export default function PokeDragRaceSimulator() {
               </div>
 
               <div className="bg-white p-6 rounded-3xl shadow-xl border border-pink-100">
-                  <h3 className="text-2xl font-bold text-pink-800 mb-4 flex items-center"><BarChart3 className="mr-3"/> PPE Analytics</h3>
-                  <div className="h-72">
-                      <PPEBarChart data={chartData} palette={chartPalette} />
-                  </div>
+                  <h3 className="text-2xl font-bold text-pink-800 mb-4 flex items-center"><Clapperboard className="mr-3"/> Producer Gossip</h3>
+                  {recentStories.length === 0 ? (
+                      <div className="text-sm text-gray-500">No episodes have aired yet—stay tuned for the drama drop.</div>
+                  ) : (
+                      <div className="space-y-4">
+                          {recentStories.map(story => (
+                              <div key={`${story.episode}-${story.challenge.name}`} className="bg-pink-50/70 border border-pink-100 rounded-2xl p-4 shadow-sm">
+                                  <div className="text-xs uppercase tracking-widest text-pink-500 font-semibold">Episode {story.episode} • {story.challenge.name}</div>
+                                  <p className="text-sm text-pink-800 mt-1 leading-relaxed">{story.highlight}</p>
+                              </div>
+                          ))}
+                      </div>
+                  )}
               </div>
           </div>
 
@@ -2917,7 +3359,7 @@ export default function PokeDragRaceSimulator() {
                                               <div className="text-xs text-gray-500">Last placement: {queen.trackRecord[queen.trackRecord.length - 1]}</div>
                                           </div>
                                       </div>
-                                      <div className="text-xs uppercase tracking-widest text-pink-500">PPE {formatPPE(summary.ppe)}</div>
+                                      <div className="text-xs uppercase tracking-widest text-pink-500">Season stats: {summary.wins} wins • {summary.bottoms} bottoms</div>
                                   </div>
                               );
                           })}
@@ -2928,13 +3370,13 @@ export default function PokeDragRaceSimulator() {
               <div className="bg-white p-6 rounded-3xl shadow-xl border border-pink-100">
                   <h3 className="text-2xl font-bold text-pink-800 mb-4 flex items-center"><MessageSquare className="mr-3"/> Confessionals Cam</h3>
                   <div className="space-y-6 max-h-[360px] overflow-y-auto pr-4 custom-scrollbar">
-                      {cast.filter(c => c.confessionals.length > 0).flatMap(c => c.confessionals.map((conf, i) => ({ queen: c, text: conf, id: `${c.id}-${i}`, idx: i })))
-                        .sort((a,b) => b.idx - a.idx).slice(0, 20).map((item) => (
-                          <div key={item.id} className="flex items-start space-x-4 bg-pink-50 p-4 rounded-2xl border border-pink-100 shadow-sm">
+                      {confessionalsFeed.map(item => (
+                          <div key={`${item.queen.id}-${item.index}-${item.conf.episode}`} className="flex items-start space-x-4 bg-pink-50 p-4 rounded-2xl border border-pink-100 shadow-sm">
                               <img src={getQueenImg(item.queen.dexId)} className="w-12 h-12 bg-white rounded-full border-2 border-pink-200 flex-shrink-0" />
                               <div>
                                   <span className="font-bold text-pink-900 text-sm">{item.queen.name}</span>
-                                  <div className="text-gray-700 italic mt-1 text-sm leading-relaxed">"{item.text}"</div>
+                                  <div className="text-[11px] uppercase tracking-widest text-pink-500 mt-1">Ep {item.conf.episode} • {item.conf.context.toUpperCase()} • {item.conf.reason}</div>
+                                  <div className="text-gray-700 italic mt-1 text-sm leading-relaxed">"{item.conf.text}"</div>
                               </div>
                           </div>
                       ))}

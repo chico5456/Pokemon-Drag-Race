@@ -3682,24 +3682,44 @@ export default function PokeDragRaceSimulator() {
         cast.reduce((max, q) => Math.max(max, q.trackRecord.length), 0)
     );
 
-    const placementClassMap: Record<string, string> = {
-        'WIN': 'bg-[#2563eb] text-white border-[#1e3a8a]',
-        'WIN+RTRN': 'bg-[#4338ca] text-white border-[#312e81]',
-        'WIN+OUT': 'bg-[#7c3aed] text-white border-[#5b21b6]',
-        'TOP2': 'bg-[#38bdf8] text-[#0b1120] border-[#0284c7]',
-        'HIGH': 'bg-[#c7d2fe] text-[#1e3a8a] border-[#a5b4fc]',
-        'SAFE': 'bg-[#e5e7eb] text-[#1f2937] border-[#d1d5db]',
-        'LOW': 'bg-[#fecdd3] text-[#9f1239] border-[#fb7185]',
-        'BTM2': 'bg-[#f87171] text-[#7f1d1d] border-[#ef4444]',
-        'CHOCOLATE': 'bg-[#fbbf24] text-[#422006] border-[#92400e]',
-        'OUT': 'bg-[#94a3b8] text-[#111827] border-[#475569]',
-        'ELIM': 'bg-[#b91c1c] text-white border-[#7f1d1d]',
-        'RUNNER-UP': 'bg-[#c7d2fe] text-[#312e81] border-[#a5b4fc]',
-        'WINNER': 'bg-[#facc15] text-[#78350f] border-[#ca8a04]',
-        'RETURN': 'bg-[#34d399] text-[#064e3b] border-[#047857]',
-        'RTRN': 'bg-[#34d399] text-[#064e3b] border-[#047857]',
-        'N/A': 'bg-[#e2e8f0] text-[#64748b] border-[#cbd5f5]',
-        '': 'bg-[#e2e8f0] text-[#94a3b8] border-[#cbd5f5]',
+    const createPlacementStyle = (
+        backgroundColor: string,
+        color: string,
+        borderColor: string
+    ): React.CSSProperties => ({
+        backgroundColor,
+        color,
+        borderColor,
+        backgroundImage: 'none'
+    });
+
+    const placementStyleMap: Record<string, React.CSSProperties> = {
+        'WIN': createPlacementStyle('#2563eb', '#ffffff', '#1e3a8a'),
+        'WIN+RTRN': createPlacementStyle('#4338ca', '#ffffff', '#312e81'),
+        'WIN+OUT': createPlacementStyle('#7c3aed', '#ffffff', '#5b21b6'),
+        'TOP2': createPlacementStyle('#38bdf8', '#0b1120', '#0284c7'),
+        'HIGH': createPlacementStyle('#c7d2fe', '#1e3a8a', '#a5b4fc'),
+        'SAFE': createPlacementStyle('#e5e7eb', '#1f2937', '#d1d5db'),
+        'LOW': createPlacementStyle('#fecdd3', '#9f1239', '#fb7185'),
+        'BTM2': createPlacementStyle('#f87171', '#7f1d1d', '#ef4444'),
+        'CHOCOLATE': createPlacementStyle('#fbbf24', '#422006', '#92400e'),
+        'OUT': createPlacementStyle('#94a3b8', '#111827', '#475569'),
+        'ELIM': createPlacementStyle('#b91c1c', '#ffffff', '#7f1d1d'),
+        'RUNNER-UP': createPlacementStyle('#c7d2fe', '#312e81', '#a5b4fc'),
+        'WINNER': createPlacementStyle('#facc15', '#78350f', '#ca8a04'),
+        'RETURN': createPlacementStyle('#34d399', '#064e3b', '#047857'),
+        'RTRN': createPlacementStyle('#34d399', '#064e3b', '#047857'),
+        'N/A': createPlacementStyle('#e2e8f0', '#64748b', '#cbd5f5'),
+        '': createPlacementStyle('#e2e8f0', '#94a3b8', '#cbd5f5'),
+    };
+
+    const portraitZoomStyle: React.CSSProperties = {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        objectPosition: '50% 38%',
+        transform: 'scale(1.4)',
+        transformOrigin: '50% 40%'
     };
 
     const rankLabels = (() => {
@@ -3778,7 +3798,11 @@ export default function PokeDragRaceSimulator() {
                       <td className="px-4 py-3 border border-[#9ca3af]">
                         <div className="flex items-center gap-3">
                           <div className="w-14 h-14 rounded-full border-2 border-[#9ca3af] bg-white overflow-hidden">
-                            <img src={getQueenImg(queen.dexId)} className="w-full h-full object-cover object-center scale-125" />
+                            <img
+                              src={getQueenImg(queen.dexId)}
+                              className="w-full h-full"
+                              style={portraitZoomStyle}
+                            />
                           </div>
                           <div className="space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
@@ -3798,16 +3822,18 @@ export default function PokeDragRaceSimulator() {
                       </td>
                       {Array.from({ length: maxEpisodes }).map((_, episodeIndex) => {
                           const placement = queen.trackRecord[episodeIndex] ?? '';
-                          const placementClasses = placementClassMap[placement] || placementClassMap['SAFE'];
                           const displayValue = placement || '—';
                           const isBlank = placement === '';
-                          const cellClasses = isBlank
-                              ? `${placementClassMap['']}`
-                              : placementClasses;
+                          const baseStyle = placementStyleMap[isBlank ? '' : placement] || placementStyleMap['SAFE'];
                           return (
                               <td
                                   key={episodeIndex}
-                                  className={`min-w-[80px] px-3 py-3 border-[1.5px] text-center align-middle text-[11px] font-black uppercase tracking-tight ${cellClasses}`}
+                                  className="min-w-[80px] px-3 py-3 border-[1.5px] text-center align-middle text-[11px] font-black uppercase tracking-tight"
+                                  style={{
+                                      ...baseStyle,
+                                      borderStyle: 'solid',
+                                      borderWidth: '1.5px'
+                                  }}
                               >
                                   {displayValue}
                               </td>

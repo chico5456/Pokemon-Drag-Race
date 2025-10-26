@@ -58,6 +58,55 @@ type QueenTemplate = {
 
 type SeasonMode = 'final' | 'evolve';
 
+type JudgeSpecialty = ChallengeType | StatCategory | 'runway' | 'charisma' | 'story';
+
+type JudgeProfile = {
+  id: string;
+  name: string;
+  title: string;
+  specialties: JudgeSpecialty[];
+  image: string;
+  signature: string;
+};
+
+type JudgeCritique = {
+  episode: number;
+  judgeId: string;
+  judgeName: string;
+  queenId: number;
+  queenName: string;
+  tone: 'positive' | 'negative' | 'mixed';
+  quote: string;
+  focus: string;
+};
+
+type PerformanceMoment = {
+  episode: number;
+  queenId: number;
+  queenName: string;
+  title: string;
+  detail: string;
+  tone: 'slay' | 'flop' | 'gag';
+};
+
+type DramaEvent = {
+  episode: number;
+  queensInvolved: number[];
+  queenNames: string[];
+  location: 'werkroom' | 'untucked' | 'mainstage';
+  summary: string;
+  spark: string;
+};
+
+type RelationshipBeat = {
+  episode: number;
+  queenIds: number[];
+  queenNames: string[];
+  type: 'alliance' | 'feud' | 'showmance' | 'mentor';
+  description: string;
+  intensity: number;
+};
+
 interface Queen {
   id: number;
   dexId: number;
@@ -951,6 +1000,454 @@ const CHALLENGES: Challenge[] = [
   { name: "Commercial Queens", type: 'branding', description: "Film a hilarious commercial for 'Squirtle Wax'.", primaryStats: ['acting', 'comedy'], icon: <VideoIcon size={32} className="text-blue-400" /> },
 ];
 
+const JUDGE_PROFILES: JudgeProfile[] = [
+  {
+    id: 'cynthia',
+    name: 'Cynthia',
+    title: 'Sinnoh Champion',
+    specialties: ['runway', 'design', 'charisma', 'makeover'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/cynthia-gen4.png',
+    signature: 'I expect legendary level polish from every queen.'
+  },
+  {
+    id: 'misty',
+    name: 'Misty',
+    title: 'Cerulean Gym Leader',
+    specialties: ['dance', 'singing', 'performance', 'story'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/misty.png',
+    signature: 'Keep it fluid and fierce like water on the main stage.'
+  },
+  {
+    id: 'brock',
+    name: 'Brock',
+    title: 'Pewter Gym Leader',
+    specialties: ['comedy', 'acting', 'improv', 'story'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/brock.png',
+    signature: 'Give us heart, humor, and something we can believe in.'
+  },
+  {
+    id: 'elesa',
+    name: 'Elesa',
+    title: 'Nimbasa Trend Icon',
+    specialties: ['runway', 'branding', 'design', 'charisma'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/elesa.png',
+    signature: 'Fashion is a battle cry—shock us or go home.'
+  },
+  {
+    id: 'sabrina',
+    name: 'Sabrina',
+    title: 'Saffron Psychic',
+    specialties: ['acting', 'improv', 'runway', 'story'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/sabrina.png',
+    signature: 'Tap into the mind of the character and we will all feel it.'
+  },
+  {
+    id: 'leon',
+    name: 'Leon',
+    title: 'Galar Champion',
+    specialties: ['talent', 'dance', 'charisma', 'performance'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/leon.png',
+    signature: 'Champion energy means owning the stage from start to finish.'
+  },
+  {
+    id: 'nessa',
+    name: 'Nessa',
+    title: 'Model & Gym Leader',
+    specialties: ['runway', 'makeover', 'design', 'performance'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/nessa.png',
+    signature: 'Serve the camera angles like the runway is an ocean current.'
+  },
+  {
+    id: 'raihan',
+    name: 'Raihan',
+    title: 'Dragon-Type Influencer',
+    specialties: ['branding', 'rumix', 'talent', 'story'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/raihan.png',
+    signature: 'If it is not going viral, it is not fierce enough.'
+  },
+  {
+    id: 'korrina',
+    name: 'Korrina',
+    title: 'Kalos Roller Star',
+    specialties: ['dance', 'talent', 'performance', 'charisma'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/korrina.png',
+    signature: 'Momentum, stamina, and sparkle—keep the energy sky high.'
+  }
+];
+
+const CRITIQUE_FOCUS = ['Runway', 'Performance', 'Character Arc', 'Storytelling', 'Execution', 'Presence'];
+
+const POSITIVE_CRITIQUES = [
+  '{queen}, your take on {challenge} shined brighter than a freshly polished gym badge.',
+  'Legendary energy tonight, {queen}. This {challenge} showing was Elite Four ready.',
+  '{queen}, you ate this {challenge} and left no crumbs—consider me obsessed.',
+  '{queen} turned the {challenge} into a master class and the league is gagged.',
+  '{queen}, you evolved mid-performance and the judges felt every moment.'
+];
+
+const NEGATIVE_CRITIQUES = [
+  '{queen}, this {challenge} felt more Magikarp splash than Hyper Beam.',
+  'I needed more conviction, {queen}. The {challenge} read nervous and under-rehearsed.',
+  '{queen}, your runway told a different story than the {challenge}, and not in a good way.',
+  'Tonight\'s {challenge} felt basic badge level when we needed champion energy from you, {queen}.',
+  '{queen}, the concept was cute but the execution was pure Team Rocket chaos.'
+];
+
+const MIXED_CRITIQUES = [
+  '{queen}, the {challenge} was shaky but the runway sold me a fantasy—keep that balance.',
+  'I saw glimpses of brilliance, {queen}, but the {challenge} needed sharper storytelling.',
+  '{queen}, the ingredients were there, but you didn\'t quite serve the full {challenge} meal.',
+  'Runway was fierce, {queen}, but the {challenge} energy dropped like a fainted mon.',
+  '{queen}, your charisma saved a middling {challenge}; polish the details for next week.'
+];
+
+const PERFORMANCE_LIBRARY = {
+  slay: [
+    '{queen} detonated the {challenge} stage with a finale pose that shook the judges table.',
+    '{queen} blended vocals and choreography so tight the crew rewatched the playback twice.',
+    '{queen} delivered a Mega Evolution reveal mid-{challenge} and the crowd screamed.',
+    '{queen} commanded the {challenge} spotlight with gym-leader level authority.'
+  ],
+  flop: [
+    '{queen} blanked on choreography and improvised jazz hands—chaos ensued.',
+    "{queen}'s verse tripped over itself, leaving the {challenge} crew wincing.",
+    '{queen} chased the beat all number long and never fully caught it.',
+    'Wardrobe betrayed {queen} mid-{challenge}, and she never fully recovered.'
+  ],
+  gag: [
+    '{queen} pulled a live Pikachu prop for the {challenge} and everyone levitated.',
+    '{queen} threw shade mid-number that sparked an instant meme in the werkroom monitors.',
+    '{queen} remixed the choreography on the fly and the other queens struggled to keep up.',
+    '{queen} whispered a gag line to the judges mid-runway that will trend for weeks.'
+  ]
+} as const;
+
+const DRAMA_TEMPLATES = {
+  werkroom: [
+    '{queenA} accused {queenB} of stealing her rhinestones before {challenge}, sparks flew.',
+    '{queenA} and {queenB} called a secret strategy meeting at the makeup mirrors.',
+    '{queenA} finds {queenB} rehearsing in her mirror and they spiral into a shouting match.'
+  ],
+  untucked: [
+    '{queenA} vents that {queenB} hogged camera time during {challenge}, the room freezes.',
+    '{queenA} consoles {queenB} after critiques and they plot a redemption arc.',
+    '{queenA} reads {queenB} for her runway and a drink nearly flies.'
+  ],
+  mainstage: [
+    '{queenA} side-eyed {queenB} during critiques and the judges clocked every second.',
+    '{queenA} thanked {queenB} for saving the number—teamwork on the {challenge} mainstage.',
+    '{queenA} undercut {queenB} in front of the judges and jaws hit the runway.'
+  ]
+} as const;
+
+const RELATIONSHIP_TEMPLATES = {
+  alliance: [
+    '{queenA} and {queenB} lock in a pact to trade choreography tips all season.',
+    '{queenA} promises to block shade aimed at {queenB} after today\'s {challenge}.',
+    '{queenA} and {queenB} share notes and form a strategic duo backstage.'
+  ],
+  feud: [
+    '{queenA} swears {queenB} is sabotaging her costumes after today\'s {challenge}.',
+    '{queenA} and {queenB} spark a cold war over mirror space and producers are salivating.',
+    '{queenA} vows to send {queenB} home after harsh words post-{challenge}.'
+  ],
+  showmance: [
+    '{queenA} and {queenB} share a secret hand squeeze before walking the runway.',
+    '{queenA} sneaks {queenB} a note that says “top four together” and blushes.',
+    '{queenA} and {queenB} rehearse alone, and the flirtation is undeniable.'
+  ],
+  mentor: [
+    '{queenA} coaches {queenB} through harmonies, turning rehearsal into a masterclass.',
+    '{queenA} fixes {queenB}\'s garment moments before runway call time.',
+    '{queenA} shares beat counts with {queenB}, promising to sync in the number.'
+  ]
+} as const;
+
+const fillTemplate = (template: string, replacements: Record<string, string>) =>
+  template.replace(/\{(.*?)\}/g, (_, key) => replacements[key] ?? '');
+
+const sample = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+const sampleSize = <T,>(arr: T[], count: number): T[] => {
+  const pool = [...arr];
+  const picks: T[] = [];
+  while (pool.length > 0 && picks.length < count) {
+    const index = Math.floor(Math.random() * pool.length);
+    picks.push(pool.splice(index, 1)[0]);
+  }
+  return picks;
+};
+
+const limitHistory = <T,>(arr: T[], limit: number) => (arr.length > limit ? arr.slice(arr.length - limit) : arr);
+
+const DRAMA_SPARK_LABELS: Record<keyof typeof DRAMA_TEMPLATES, string> = {
+  werkroom: 'Werkroom clash',
+  untucked: 'Untucked tea',
+  mainstage: 'Mainstage moment'
+};
+
+const createJudgeCritiques = ({
+  judges,
+  queens,
+  placements,
+  challenge,
+  episode
+}: {
+  judges: JudgeProfile[];
+  queens: Queen[];
+  placements: Record<number, Placement>;
+  challenge: Challenge;
+  episode: number;
+}): JudgeCritique[] => {
+  if (judges.length === 0 || queens.length === 0) return [];
+
+  const positivePool = queens.filter(q => ['WIN', 'WIN+RTRN', 'WIN+OUT', 'TOP2', 'HIGH'].includes(placements[q.id] || ''));
+  const negativePool = queens.filter(q => ['LOW', 'BTM2', 'OUT', 'ELIM'].includes(placements[q.id] || ''));
+  const mixedPool = queens.filter(q => !positivePool.includes(q) && !negativePool.includes(q));
+
+  const pull = (pool: Queen[], fallbackA: Queen[], fallbackB: Queen[]): Queen | null => {
+      if (pool.length > 0) {
+          const index = Math.floor(Math.random() * pool.length);
+          return pool.splice(index, 1)[0];
+      }
+      if (fallbackA.length > 0) {
+          const index = Math.floor(Math.random() * fallbackA.length);
+          return fallbackA.splice(index, 1)[0];
+      }
+      if (fallbackB.length > 0) {
+          const index = Math.floor(Math.random() * fallbackB.length);
+          return fallbackB.splice(index, 1)[0];
+      }
+      return null;
+  };
+
+  const buildQuote = (tone: 'positive' | 'negative' | 'mixed', queenName: string) => {
+      const library = tone === 'positive'
+          ? POSITIVE_CRITIQUES
+          : tone === 'negative'
+              ? NEGATIVE_CRITIQUES
+              : MIXED_CRITIQUES;
+      return fillTemplate(sample(library), {
+          queen: queenName,
+          challenge: challenge.name
+      });
+  };
+
+  const critiques: JudgeCritique[] = [];
+  judges.forEach((judge, index) => {
+      const positiveTarget = pull(positivePool, mixedPool, negativePool);
+      if (positiveTarget) {
+          critiques.push({
+              episode,
+              judgeId: judge.id,
+              judgeName: judge.name,
+              queenId: positiveTarget.id,
+              queenName: positiveTarget.name,
+              tone: 'positive',
+              quote: `${buildQuote('positive', positiveTarget.name)} ${judge.signature}`,
+              focus: sample(CRITIQUE_FOCUS)
+          });
+      }
+
+      const negativeTarget = pull(negativePool, mixedPool, positivePool);
+      if (negativeTarget) {
+          critiques.push({
+              episode,
+              judgeId: judge.id,
+              judgeName: judge.name,
+              queenId: negativeTarget.id,
+              queenName: negativeTarget.name,
+              tone: 'negative',
+              quote: `${buildQuote('negative', negativeTarget.name)} ${judge.signature}`,
+              focus: sample(CRITIQUE_FOCUS)
+          });
+      }
+
+      if (index === 0) {
+          const mixedTarget = pull(mixedPool, positivePool, negativePool);
+          if (mixedTarget) {
+              critiques.push({
+                  episode,
+                  judgeId: judge.id,
+                  judgeName: judge.name,
+                  queenId: mixedTarget.id,
+                  queenName: mixedTarget.name,
+                  tone: 'mixed',
+                  quote: `${buildQuote('mixed', mixedTarget.name)} ${judge.signature}`,
+                  focus: sample(CRITIQUE_FOCUS)
+              });
+          }
+      }
+  });
+
+  return critiques;
+};
+
+const createPerformanceMoments = ({
+  queens,
+  scores,
+  challenge,
+  episode
+}: {
+  queens: Queen[];
+  scores: { id: number; score: number }[];
+  challenge: Challenge;
+  episode: number;
+}): PerformanceMoment[] => {
+  if (scores.length === 0 || queens.length === 0) return [];
+  const queenMap = new Map<number, Queen>();
+  queens.forEach(q => queenMap.set(q.id, q));
+
+  const top = scores[0];
+  const bottom = scores[scores.length - 1];
+  const midIndex = scores.length > 2 ? Math.floor(Math.random() * (scores.length - 2)) + 1 : 0;
+  const gag = scores[midIndex];
+
+  const buildDetail = (tone: keyof typeof PERFORMANCE_LIBRARY, queenName: string) =>
+      fillTemplate(sample(PERFORMANCE_LIBRARY[tone]), {
+          queen: queenName,
+          challenge: challenge.name
+      });
+
+  const resolveQueen = (entry: { id: number; score: number }) => queenMap.get(entry.id);
+
+  const moments: PerformanceMoment[] = [];
+  const topQueen = resolveQueen(top);
+  if (topQueen) {
+      moments.push({
+          episode,
+          queenId: topQueen.id,
+          queenName: topQueen.name,
+          title: 'Performance Peak',
+          detail: buildDetail('slay', topQueen.name),
+          tone: 'slay'
+      });
+  }
+
+  const gagQueen = resolveQueen(gag);
+  if (gagQueen) {
+      moments.push({
+          episode,
+          queenId: gagQueen.id,
+          queenName: gagQueen.name,
+          title: 'Gag of the Week',
+          detail: buildDetail('gag', gagQueen.name),
+          tone: 'gag'
+      });
+  }
+
+  const bottomQueen = resolveQueen(bottom);
+  if (bottomQueen) {
+      moments.push({
+          episode,
+          queenId: bottomQueen.id,
+          queenName: bottomQueen.name,
+          title: 'Struggle Report',
+          detail: buildDetail('flop', bottomQueen.name),
+          tone: 'flop'
+      });
+  }
+
+  return moments;
+};
+
+const createRelationshipMoments = ({
+  queens,
+  challenge,
+  episode
+}: {
+  queens: Queen[];
+  challenge: Challenge;
+  episode: number;
+}): RelationshipBeat[] => {
+  if (queens.length < 2) return [];
+  const shuffled = [...queens].sort(() => 0.5 - Math.random());
+  const beats: RelationshipBeat[] = [];
+  const types: RelationshipBeat['type'][] = ['alliance', 'feud', 'showmance', 'mentor'];
+
+  for (let i = 0; i < shuffled.length - 1 && beats.length < 3; i += 2) {
+      const queenA = shuffled[i];
+      const queenB = shuffled[i + 1] || shuffled[0];
+      if (!queenA || !queenB || queenA.id === queenB.id) continue;
+      const type = types[beats.length % types.length];
+      const description = fillTemplate(sample(RELATIONSHIP_TEMPLATES[type]), {
+          queenA: queenA.name,
+          queenB: queenB.name,
+          challenge: challenge.name
+      });
+      beats.push({
+          episode,
+          queenIds: [queenA.id, queenB.id],
+          queenNames: [queenA.name, queenB.name],
+          type,
+          description,
+          intensity: Math.min(5, Math.max(2, Math.ceil(Math.random() * 4) + (type === 'feud' ? 1 : 0)))
+      });
+  }
+
+  return beats;
+};
+
+const createDramaMoments = ({
+  queens,
+  challenge,
+  episode,
+  placements
+}: {
+  queens: Queen[];
+  challenge: Challenge;
+  episode: number;
+  placements: Record<number, Placement>;
+}): DramaEvent[] => {
+  if (queens.length < 2) return [];
+
+  const positive = queens.filter(q => ['WIN', 'WIN+RTRN', 'WIN+OUT', 'TOP2', 'HIGH'].includes(placements[q.id] || ''));
+  const negative = queens.filter(q => ['LOW', 'BTM2', 'OUT', 'ELIM'].includes(placements[q.id] || ''));
+  const everyoneElse = queens.filter(q => !positive.includes(q) && !negative.includes(q));
+  const allQueens = queens;
+
+  const choosePair = (primary: Queen[], secondary: Queen[]): [Queen, Queen] => {
+      const firstPool = primary.length > 0 ? primary : allQueens;
+      const first = sample(firstPool);
+      const secondPool = secondary.filter(q => q.id !== first.id);
+      const fallbackPool = allQueens.filter(q => q.id !== first.id);
+      const second = (secondPool.length > 0 ? sample(secondPool) : sample(fallbackPool)) || first;
+      return [first, second];
+  };
+
+  const events: DramaEvent[] = [];
+  (['werkroom', 'untucked', 'mainstage'] as const).forEach(location => {
+      let pair: [Queen, Queen];
+      switch (location) {
+          case 'werkroom':
+              pair = choosePair(positive, negative.length > 0 ? negative : everyoneElse);
+              break;
+          case 'untucked':
+              pair = choosePair(negative.length > 0 ? negative : everyoneElse, everyoneElse.length > 0 ? everyoneElse : positive);
+              break;
+          default:
+              pair = choosePair(positive.length > 0 ? positive : everyoneElse, positive.length > 1 ? positive : everyoneElse);
+              break;
+      }
+      const template = sample(DRAMA_TEMPLATES[location]);
+      const summary = fillTemplate(template, {
+          queenA: pair[0].name,
+          queenB: pair[1].name,
+          challenge: challenge.name
+      });
+      events.push({
+          episode,
+          queensInvolved: [pair[0].id, pair[1].id],
+          queenNames: [pair[0].name, pair[1].name],
+          location,
+          summary,
+          spark: DRAMA_SPARK_LABELS[location]
+      });
+  });
+
+  return events;
+};
+
 // --- Helper Functions ---
 
 const getQueenImg = (dexId: number) => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${dexId}.png`;
@@ -1296,6 +1793,15 @@ export default function PokeDragRaceSimulator() {
   const [revengeBottomIds, setRevengeBottomIds] = useState<number[]>([]);
   const [revengePairings, setRevengePairings] = useState<{ returneeId: number; partnerId: number }[]>([]);
   const [autoSelectCount, setAutoSelectCount] = useState('8');
+  const [currentJudges, setCurrentJudges] = useState<JudgeProfile[]>([]);
+  const [currentCritiques, setCurrentCritiques] = useState<JudgeCritique[]>([]);
+  const [performanceMoments, setPerformanceMoments] = useState<PerformanceMoment[]>([]);
+  const [dramaEvents, setDramaEvents] = useState<DramaEvent[]>([]);
+  const [relationshipBeats, setRelationshipBeats] = useState<RelationshipBeat[]>([]);
+  const [critiqueHistory, setCritiqueHistory] = useState<JudgeCritique[]>([]);
+  const [performanceHistory, setPerformanceHistory] = useState<PerformanceMoment[]>([]);
+  const [dramaHistory, setDramaHistory] = useState<DramaEvent[]>([]);
+  const [relationshipHistory, setRelationshipHistory] = useState<RelationshipBeat[]>([]);
 
   const makeConfessional = useCallback((text: string, reason: string, context: ConfessionalContext): ConfessionalEntry => ({
       text,
@@ -1318,6 +1824,25 @@ export default function PokeDragRaceSimulator() {
       setAutoSelectCount(String(sanitized));
   }, [autoSelectCount]);
 
+  const assignJudgesForChallenge = useCallback((challenge: Challenge) => {
+      const headJudge = JUDGE_PROFILES.find(j => j.id === 'cynthia');
+      const specialists = JUDGE_PROFILES.filter(j => j.id !== headJudge?.id && (
+          j.specialties.includes(challenge.type) ||
+          challenge.primaryStats.some(stat => j.specialties.includes(stat))
+      ));
+      const generalists = JUDGE_PROFILES.filter(j => j.id !== headJudge?.id && !specialists.includes(j));
+      const lineup: JudgeProfile[] = [];
+      if (headJudge) {
+          lineup.push(headJudge);
+      }
+      lineup.push(...sampleSize(specialists, 2));
+      if (lineup.length < 3) {
+          lineup.push(...sampleSize(generalists, 3 - lineup.length));
+      }
+      setCurrentJudges(lineup.slice(0, 3));
+      setCurrentCritiques([]);
+  }, []);
+
   const generateChallenge = useCallback((challenge: Challenge, options?: { isSuggested?: boolean }) => {
       setCurrentChallenge(challenge);
       setUnsavedPlacements({});
@@ -1325,15 +1850,21 @@ export default function PokeDragRaceSimulator() {
       if (options?.isSuggested) {
           setSuggestedChallenge(challenge);
       }
+      assignJudgesForChallenge(challenge);
+      setPerformanceMoments([]);
+      setDramaEvents([]);
+      setRelationshipBeats([]);
       const prepPrompts = [
           `Werkroom buzz: ${challenge.name} has the dolls scrambling to rehearse.`,
           `Episode ${episodeCount}: The queens whisper about strategies for ${challenge.name}.`,
           `${challenge.name} rehearsal chaos! Tempers are flaring and wigs are flying.`,
           `Producers gag: ${challenge.name} is forcing alliances to crack before judging.`,
           `${challenge.name} is announced and half the room is already plotting revenge.`,
+          `${challenge.name} rehearsal notes: alliances forge, frenemies feud, and producers are rolling on every beat.`,
+          `${challenge.name} has the judges texting each other—expect a stacked panel tonight.`,
       ];
       setCurrentStoryline(prepPrompts[Math.floor(Math.random() * prepPrompts.length)]);
-  }, [episodeCount]);
+  }, [episodeCount, assignJudgesForChallenge]);
 
   const activeQueens = useMemo(() => cast.filter(q => q.status === 'active'), [cast]);
 
@@ -1616,6 +2147,13 @@ export default function PokeDragRaceSimulator() {
           } else {
               setPhase('CHALLENGE_SELECTION');
           }
+          setCurrentChallenge(null);
+          setSuggestedChallenge(null);
+          setCurrentJudges([]);
+          setCurrentCritiques([]);
+          setPerformanceMoments([]);
+          setDramaEvents([]);
+          setRelationshipBeats([]);
           if (episodeCount >= 5) {
               setRevengeEpisodeActive(false);
               setRevengeReturneeIds([]);
@@ -1645,11 +2183,14 @@ export default function PokeDragRaceSimulator() {
       if (available.length === 0) {
           return;
       }
-      const suggestion = available[Math.floor(Math.random() * available.length)];
-      if (!currentChallenge || currentChallenge.name !== suggestion.name) {
-          generateChallenge(suggestion, { isSuggested: true });
-      } else if (!suggestedChallenge || suggestedChallenge.name !== suggestion.name) {
+      if (!suggestedChallenge) {
+          const suggestion = sample(available);
           setSuggestedChallenge(suggestion);
+          if (!currentChallenge) {
+              generateChallenge(suggestion, { isSuggested: true });
+          }
+      } else if (!currentChallenge) {
+          generateChallenge(suggestedChallenge, { isSuggested: true });
       }
   }, [phase, revengeEpisodeActive, splitPremiere, episodeCount, currentChallenge, suggestedChallenge, generateChallenge]);
 
@@ -1729,6 +2270,42 @@ export default function PokeDragRaceSimulator() {
         });
 
         setUnsavedPlacements(placements);
+        const revengeScores = currentEpisodeQueens.map(q => ({
+            id: q.id,
+            score: calculatePerformance(q, currentChallenge!, modifiers)
+        }));
+        const critiques = createJudgeCritiques({
+            judges: currentJudges,
+            queens: currentEpisodeQueens,
+            placements,
+            challenge: currentChallenge!,
+            episode: episodeCount
+        });
+        setCurrentCritiques(critiques);
+        setCritiqueHistory(prev => limitHistory([...prev, ...critiques], 80));
+        const performances = createPerformanceMoments({
+            queens: currentEpisodeQueens,
+            scores: revengeScores,
+            challenge: currentChallenge!,
+            episode: episodeCount
+        });
+        setPerformanceMoments(performances);
+        setPerformanceHistory(prev => limitHistory([...prev, ...performances], 80));
+        const relationships = createRelationshipMoments({
+            queens: currentEpisodeQueens,
+            challenge: currentChallenge!,
+            episode: episodeCount
+        });
+        setRelationshipBeats(relationships);
+        setRelationshipHistory(prev => limitHistory([...prev, ...relationships], 80));
+        const drama = createDramaMoments({
+            queens: currentEpisodeQueens,
+            challenge: currentChallenge!,
+            episode: episodeCount,
+            placements
+        });
+        setDramaEvents(drama);
+        setDramaHistory(prev => limitHistory([...prev, ...drama], 80));
         return;
     }
 
@@ -1800,6 +2377,38 @@ export default function PokeDragRaceSimulator() {
     }
 
     setUnsavedPlacements(newPlacements);
+    const critiques = createJudgeCritiques({
+        judges: currentJudges,
+        queens: currentEpisodeQueens,
+        placements: newPlacements,
+        challenge: currentChallenge,
+        episode: episodeCount
+    });
+    setCurrentCritiques(critiques);
+    setCritiqueHistory(prev => limitHistory([...prev, ...critiques], 80));
+    const performances = createPerformanceMoments({
+        queens: currentEpisodeQueens,
+        scores: scoredQueens,
+        challenge: currentChallenge,
+        episode: episodeCount
+    });
+    setPerformanceMoments(performances);
+    setPerformanceHistory(prev => limitHistory([...prev, ...performances], 80));
+    const relationships = createRelationshipMoments({
+        queens: currentEpisodeQueens,
+        challenge: currentChallenge,
+        episode: episodeCount
+    });
+    setRelationshipBeats(relationships);
+    setRelationshipHistory(prev => limitHistory([...prev, ...relationships], 80));
+    const drama = createDramaMoments({
+        queens: currentEpisodeQueens,
+        challenge: currentChallenge,
+        episode: episodeCount,
+        placements: newPlacements
+    });
+    setDramaEvents(drama);
+    setDramaHistory(prev => limitHistory([...prev, ...drama], 80));
   };
 
   const finalizePlacements = () => {
@@ -3091,6 +3700,16 @@ export default function PokeDragRaceSimulator() {
         )}
       </div>
 
+      {['SETUP', 'CAST_SELECTION', 'SEASON_OVER'].includes(phase) ? null : (
+          <EpisodeIntelPanel
+              judges={currentJudges}
+              critiques={currentCritiques}
+              performances={performanceMoments}
+              drama={dramaEvents}
+              relationships={relationshipBeats}
+          />
+      )}
+
       {/* Action Bar */}
       {['CAST_SELECTION', 'SETUP', 'SEASON_OVER'].every(p => p !== phase) && (
         <div className="bg-white/90 backdrop-blur-md p-4 border-t-4 border-pink-500 flex justify-between items-center shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.1)] sticky bottom-0 z-20">
@@ -3148,7 +3767,7 @@ export default function PokeDragRaceSimulator() {
         }
 
         if (priorityA === 3) {
-            const elimDiff = getEliminationIndex(b) - getEliminationIndex(a);
+            const elimDiff = getEliminationIndex(a) - getEliminationIndex(b);
             if (elimDiff !== 0) {
                 return elimDiff;
             }
@@ -3278,6 +3897,10 @@ export default function PokeDragRaceSimulator() {
           .filter(q => q.status === 'eliminated')
           .sort((a, b) => getEliminationIndex(a) - getEliminationIndex(b));
       const recentStories = [...challengeHistory].sort((a, b) => b.episode - a.episode).slice(0, 3);
+      const latestRelationships = relationshipHistory.slice(-6).reverse();
+      const latestDrama = dramaHistory.slice(-6).reverse();
+      const latestCritiques = critiqueHistory.slice(-6).reverse();
+      const latestPerformances = performanceHistory.slice(-6).reverse();
       const confessionalsFeed = cast
           .flatMap(queen => queen.confessionals.map((conf, index) => ({ queen, conf, index })))
           .sort((a, b) => {
@@ -3384,6 +4007,61 @@ export default function PokeDragRaceSimulator() {
                   </div>
               </div>
           </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-3xl shadow-xl border border-pink-100">
+                  <h3 className="text-xl font-bold text-pink-800 mb-3 flex items-center"><Users className="mr-2" /> Relationship Timeline</h3>
+                  <div className="space-y-3 max-h-64 overflow-y-auto pr-3 custom-scrollbar">
+                      {latestRelationships.length === 0 && <div className="text-sm text-gray-500">No alliances or rivalries recorded yet.</div>}
+                      {latestRelationships.map((beat, idx) => (
+                          <div key={`${beat.episode}-${beat.queenIds.join('-')}-${idx}`} className="bg-purple-50 border border-purple-100 rounded-2xl px-4 py-3 shadow-sm">
+                              <div className="text-[11px] uppercase tracking-widest text-purple-500">Ep {beat.episode} • {beat.type.toUpperCase()}</div>
+                              <div className="font-semibold text-purple-900">{beat.queenNames.join(' & ')}</div>
+                              <p className="text-sm text-purple-700 mt-1 leading-relaxed">{beat.description}</p>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+              <div className="bg-white p-6 rounded-3xl shadow-xl border border-pink-100">
+                  <h3 className="text-xl font-bold text-pink-800 mb-3 flex items-center"><Megaphone className="mr-2" /> Drama Archive</h3>
+                  <div className="space-y-3 max-h-64 overflow-y-auto pr-3 custom-scrollbar">
+                      {latestDrama.length === 0 && <div className="text-sm text-gray-500">The tea is still brewing.</div>}
+                      {latestDrama.map((event, idx) => (
+                          <div key={`${event.episode}-${event.location}-${idx}`} className="bg-rose-50 border border-rose-100 rounded-2xl px-4 py-3 shadow-sm">
+                              <div className="text-[11px] uppercase tracking-widest text-rose-500">Ep {event.episode} • {event.spark}</div>
+                              <div className="font-semibold text-rose-900">{event.queenNames.join(' vs ')}</div>
+                              <p className="text-sm text-rose-700 mt-1 leading-relaxed">{event.summary}</p>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+              <div className="bg-white p-6 rounded-3xl shadow-xl border border-pink-100">
+                  <h3 className="text-xl font-bold text-pink-800 mb-3 flex items-center"><Gavel className="mr-2" /> Judges' Receipts</h3>
+                  <div className="space-y-3 max-h-64 overflow-y-auto pr-3 custom-scrollbar">
+                      {latestCritiques.length === 0 && <div className="text-sm text-gray-500">No critiques saved yet.</div>}
+                      {latestCritiques.map((critique, idx) => (
+                          <div key={`${critique.episode}-${critique.judgeId}-${idx}`} className="bg-pink-50 border border-pink-100 rounded-2xl px-4 py-3 shadow-sm">
+                              <div className="text-[11px] uppercase tracking-widest text-pink-500">Ep {critique.episode} • {critique.judgeName}</div>
+                              <div className="font-semibold text-pink-900">{critique.queenName}</div>
+                              <p className="text-sm text-pink-700 mt-1 leading-relaxed">{critique.quote}</p>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+              <div className="bg-white p-6 rounded-3xl shadow-xl border border-pink-100">
+                  <h3 className="text-xl font-bold text-pink-800 mb-3 flex items-center"><Clapperboard className="mr-2" /> Performance Spotlight Vault</h3>
+                  <div className="space-y-3 max-h-64 overflow-y-auto pr-3 custom-scrollbar">
+                      {latestPerformances.length === 0 && <div className="text-sm text-gray-500">Performances will populate after the first challenge.</div>}
+                      {latestPerformances.map((moment, idx) => (
+                          <div key={`${moment.episode}-${moment.queenId}-${idx}`} className="bg-indigo-50 border border-indigo-100 rounded-2xl px-4 py-3 shadow-sm">
+                              <div className="text-[11px] uppercase tracking-widest text-indigo-500">Ep {moment.episode} • {moment.title}</div>
+                              <div className="font-semibold text-indigo-900">{moment.queenName}</div>
+                              <p className="text-sm text-indigo-700 mt-1 leading-relaxed">{moment.detail}</p>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+          </div>
         </div>
       );
   };
@@ -3411,6 +4089,112 @@ export default function PokeDragRaceSimulator() {
     </>
   );
 }
+
+const EpisodeIntelPanel = ({
+    judges,
+    critiques,
+    performances,
+    drama,
+    relationships
+}: {
+    judges: JudgeProfile[];
+    critiques: JudgeCritique[];
+    performances: PerformanceMoment[];
+    drama: DramaEvent[];
+    relationships: RelationshipBeat[];
+}) => {
+    const toneStyles: Record<JudgeCritique['tone'], string> = {
+        positive: 'border-green-300 bg-green-50 text-green-700',
+        negative: 'border-rose-300 bg-rose-50 text-rose-700',
+        mixed: 'border-amber-300 bg-amber-50 text-amber-700'
+    };
+
+    return (
+        <div className="mt-10 space-y-6">
+            <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-extrabold text-pink-900 flex items-center">
+                    <Sparkles className="mr-3 text-pink-500" /> Episode Intel Drop
+                </h3>
+                <span className="text-xs uppercase tracking-widest text-pink-500">Every beat of the episode at a glance</span>
+            </div>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div className="bg-white rounded-3xl shadow-xl border border-pink-100 p-6">
+                    <h4 className="text-sm uppercase tracking-[0.4em] text-pink-600 mb-4 flex items-center"><Gavel className="mr-2" />Judges Panel</h4>
+                    <div className="flex flex-wrap gap-4">
+                        {judges.length === 0 && <div className="text-sm text-gray-500">Judges will arrive once a challenge is locked.</div>}
+                        {judges.map(judge => (
+                            <div key={judge.id} className="flex items-center space-x-3 bg-pink-50 rounded-2xl border border-pink-100 px-4 py-3 shadow-sm">
+                                <img src={judge.image} className="w-12 h-12 rounded-full border-2 border-pink-200 bg-white object-contain" />
+                                <div>
+                                    <div className="font-bold text-pink-900">{judge.name}</div>
+                                    <div className="text-[11px] uppercase tracking-widest text-pink-500">{judge.title}</div>
+                                    <div className="text-[11px] text-gray-500">{judge.signature}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div className="bg-white rounded-3xl shadow-xl border border-pink-100 p-6">
+                    <h4 className="text-sm uppercase tracking-[0.4em] text-pink-600 mb-4 flex items-center"><MessageSquare className="mr-2" />Main Stage Critiques</h4>
+                    <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                        {critiques.length === 0 && <div className="text-sm text-gray-500">Critiques drop after judging.</div>}
+                        {critiques.map((critique, index) => (
+                            <div key={`${critique.judgeId}-${critique.queenId}-${index}`} className={`rounded-2xl border px-4 py-3 shadow-sm ${toneStyles[critique.tone]}`}>
+                                <div className="flex justify-between text-xs uppercase tracking-widest">
+                                    <span>{critique.judgeName} • {critique.focus}</span>
+                                    <span>Ep {critique.episode}</span>
+                                </div>
+                                <div className="text-sm font-semibold mt-1">{critique.queenName}</div>
+                                <p className="text-sm leading-relaxed mt-1">{critique.quote}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="bg-white rounded-3xl shadow-xl border border-pink-100 p-6">
+                    <h4 className="text-sm uppercase tracking-[0.4em] text-pink-600 mb-4 flex items-center"><Clapperboard className="mr-2" />Performance Notes</h4>
+                    <div className="space-y-3">
+                        {performances.length === 0 && <div className="text-sm text-gray-500">Highlights will appear once the queens perform.</div>}
+                        {performances.map(performance => (
+                            <div key={`${performance.queenId}-${performance.tone}`} className="bg-pink-50 border border-pink-100 rounded-2xl px-4 py-3 shadow-sm">
+                                <div className="text-xs uppercase tracking-widest text-pink-500">{performance.title} • Ep {performance.episode}</div>
+                                <div className="font-semibold text-pink-900">{performance.queenName}</div>
+                                <p className="text-sm text-pink-700 mt-1 leading-relaxed">{performance.detail}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div className="bg-white rounded-3xl shadow-xl border border-pink-100 p-6">
+                    <h4 className="text-sm uppercase tracking-[0.4em] text-pink-600 mb-4 flex items-center"><Users className="mr-2" />Relationship Radar</h4>
+                    <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                        {relationships.length === 0 && <div className="text-sm text-gray-500">Alliances and feuds unlock during rehearsal.</div>}
+                        {relationships.map((beat, index) => (
+                            <div key={`${beat.type}-${beat.queenIds.join('-')}-${index}`} className="bg-purple-50 border border-purple-100 rounded-2xl px-4 py-3 shadow-sm">
+                                <div className="text-xs uppercase tracking-widest text-purple-500">Ep {beat.episode} • {beat.type.toUpperCase()}</div>
+                                <div className="font-semibold text-purple-900">{beat.queenNames.join(' & ')}</div>
+                                <p className="text-sm text-purple-700 mt-1 leading-relaxed">{beat.description}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div className="bg-white rounded-3xl shadow-xl border border-pink-100 p-6">
+                    <h4 className="text-sm uppercase tracking-[0.4em] text-pink-600 mb-4 flex items-center"><Megaphone className="mr-2" />Drama Dispatch</h4>
+                    <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                        {drama.length === 0 && <div className="text-sm text-gray-500">Producers are still rolling on the drama.</div>}
+                        {drama.map((event, index) => (
+                            <div key={`${event.location}-${event.episode}-${index}`} className="bg-rose-50 border border-rose-100 rounded-2xl px-4 py-3 shadow-sm">
+                                <div className="text-xs uppercase tracking-widest text-rose-500">Ep {event.episode} • {event.spark}</div>
+                                <div className="font-semibold text-rose-900">{event.queenNames.join(' vs ')}</div>
+                                <p className="text-sm text-rose-700 mt-1 leading-relaxed">{event.summary}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const SeasonHighlightCard = ({ title, accent, queen, value, subtext }: { title: string; accent: string; queen?: Queen; value: string; subtext: string }) => (
     <div className="bg-white rounded-3xl shadow-lg border border-pink-100 overflow-hidden">

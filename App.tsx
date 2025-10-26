@@ -3698,17 +3698,17 @@ export default function PokeDragRaceSimulator() {
                  </div>
             </div>
         )}
-      </div>
 
-      {['SETUP', 'CAST_SELECTION', 'SEASON_OVER'].includes(phase) ? null : (
-          <EpisodeIntelPanel
-              judges={currentJudges}
-              critiques={currentCritiques}
-              performances={performanceMoments}
-              drama={dramaEvents}
-              relationships={relationshipBeats}
-          />
-      )}
+        {['SETUP', 'CAST_SELECTION', 'SEASON_OVER'].includes(phase) ? null : (
+            <EpisodeIntelPanel
+                judges={currentJudges}
+                critiques={currentCritiques}
+                performances={performanceMoments}
+                drama={dramaEvents}
+                relationships={relationshipBeats}
+            />
+        )}
+      </div>
 
       {/* Action Bar */}
       {['CAST_SELECTION', 'SETUP', 'SEASON_OVER'].every(p => p !== phase) && (

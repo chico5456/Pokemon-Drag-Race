@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Trophy, Skull, Mic, Shirt, Video, Music, Sparkles, Crown, Gavel, RefreshCw, Settings,
   BarChart3, Video as VideoIcon, MessageSquare, HeartCrack, Star, Scissors, Palette,
-  Clapperboard, Music2, Smile, Zap, HelpCircle, Users, CheckCircle, XCircle, Megaphone, Gem
+  Clapperboard, Music2, Smile, Zap, HelpCircle, Users, CheckCircle, XCircle, Megaphone, Gem, Candy
 } from 'lucide-react';
 
 // --- Types & Data ---
@@ -19,6 +19,7 @@ type Placement =
   | 'SAFE'
   | 'LOW'
   | 'BTM2'
+  | 'CHOCOLATE'
   | 'OUT'
   | 'ELIM'
   | 'RUNNER-UP'
@@ -42,6 +43,15 @@ type QueenTemplate = {
 
 type SeasonMode = 'final' | 'evolve';
 
+type ChocolateStatus = 'standard' | 'golden' | 'revealed';
+
+type LalaparuzaMatchup = {
+  queens: [number, number];
+  winnerId: number;
+  winningScore: number;
+  losingScore: number;
+};
+
 interface Queen {
   id: number;
   dexId: number;
@@ -56,6 +66,7 @@ interface Queen {
   group?: 1 | 2; // For split premiere
   evolutionLine?: QueenForm[];
   evolutionStage?: number;
+  chocolateStatus?: ChocolateStatus;
 }
 
 const QUEEN_BLUEPRINTS: QueenTemplate[] = [
@@ -839,6 +850,7 @@ const instantiateQueenFromTemplate = (template: QueenTemplate, mode: SeasonMode)
     confessionals: [],
     evolutionLine: clonedForms,
     evolutionStage: startingStage,
+    chocolateStatus: 'standard',
   };
 };
 
@@ -892,7 +904,22 @@ const evolutionStyles = `
 
 type Phase = 'SETUP' | 'CAST_SELECTION' | 'ENTRANCES' | 'PROMO' | 'CHALLENGE_SELECTION' | 'CHALLENGE_INTRO' | 'PERFORMANCE' | 'JUDGING' | 'RESULTS' | 'UNTUCKED' | 'LIPSYNC' | 'ELIMINATION' | 'FINALE' | 'SEASON_OVER';
 
-type ChallengeType = 'acting' | 'comedy' | 'dance' | 'design' | 'rusical' | 'makeover' | 'improv' | 'rumix' | 'snatch_game' | 'ball' | 'branding' | 'talent' | 'roast' | 'girl_groups';
+type ChallengeType =
+  | 'acting'
+  | 'comedy'
+  | 'dance'
+  | 'design'
+  | 'rusical'
+  | 'makeover'
+  | 'improv'
+  | 'rumix'
+  | 'snatch_game'
+  | 'ball'
+  | 'branding'
+  | 'talent'
+  | 'roast'
+  | 'girl_groups'
+  | 'lalaparuza';
 
 interface Challenge {
   name: string;
@@ -909,6 +936,14 @@ const REVENGE_CHALLENGE: Challenge = {
   description: "Returning legends storm the stage in a partnered stand-up smackdown for redemption.",
   primaryStats: ['comedy', 'improv'],
   icon: <Mic size={32} className="text-purple-500" />,
+};
+
+const LALAPARUZA_CHALLENGE: Challenge = {
+  name: 'LaLaPaRuZa Smackdown',
+  type: 'lalaparuza',
+  description: 'A night of relentless lip sync battles until two queens remain on the chopping block.',
+  primaryStats: ['lipsync', 'dance'],
+  icon: <Music size={32} className="text-fuchsia-500" />,
 };
 
 const CHALLENGES: Challenge[] = [
@@ -1030,6 +1065,7 @@ const PLACEMENT_POINTS: Record<Placement, number> = {
     SAFE: 3,
     LOW: 2,
     BTM2: 1,
+    CHOCOLATE: 3,
     OUT: 0,
     ELIM: 0,
     'RUNNER-UP': 0,
@@ -1176,7 +1212,7 @@ const PPEBarChart: React.FC<{ data: PPEChartEntry[]; palette: string[] }> = ({ d
     );
 };
 
-const COMPETITIVE_PLACEMENTS: Placement[] = ['WIN', 'WIN+RTRN', 'WIN+OUT', 'TOP2', 'HIGH', 'SAFE', 'LOW', 'BTM2', 'OUT', 'ELIM'];
+const COMPETITIVE_PLACEMENTS: Placement[] = ['WIN', 'WIN+RTRN', 'WIN+OUT', 'TOP2', 'HIGH', 'SAFE', 'LOW', 'BTM2', 'CHOCOLATE', 'OUT', 'ELIM'];
 
 const calculatePPE = (trackRecord: Placement[]): number => {
     const { totalScore, competitiveEpisodes } = trackRecord.reduce(
@@ -1244,6 +1280,10 @@ const summarizePlacements = (trackRecord: Placement[]) => {
                 summary.bottoms += 1;
                 summary.competitiveEpisodes += 1;
                 break;
+            case 'CHOCOLATE':
+                summary.bottoms += 1;
+                summary.competitiveEpisodes += 1;
+                break;
             case 'OUT':
                 summary.elims += 1;
                 summary.competitiveEpisodes += 1;
@@ -1285,6 +1325,7 @@ const FAN_APPROVAL_BASE: Record<Placement, number> = {
     SAFE: 66,
     LOW: 58,
     BTM2: 44,
+    CHOCOLATE: 74,
     OUT: 30,
     ELIM: 24,
     'RUNNER-UP': 70,
@@ -1373,7 +1414,7 @@ const calculatePressureReading = (queen: Queen): PressureReading => {
 
     for (let i = recent.length - 1; i >= 0; i -= 1) {
         const placement = recent[i];
-        if (['LOW', 'BTM2', 'OUT', 'ELIM'].includes(placement)) {
+        if (['LOW', 'BTM2', 'CHOCOLATE', 'OUT', 'ELIM'].includes(placement)) {
             streak += 1;
             score += 18 + streak * 4;
         } else if (placement === 'SAFE') {
@@ -1462,6 +1503,12 @@ export default function PokeDragRaceSimulator() {
   const [producerCardAssignments, setProducerCardAssignments] = useState<Record<number, ProducerCard>>({});
   const [producerDraftMood, setProducerDraftMood] = useState<string>('');
   const [producerCardImpactLog, setProducerCardImpactLog] = useState<ProducerImpact[]>([]);
+  const [chocolateBarTwist, setChocolateBarTwist] = useState(false);
+  const [goldenChocolateId, setGoldenChocolateId] = useState<number | null>(null);
+  const [lalaparuzaTriggered, setLalaparuzaTriggered] = useState(false);
+  const [lalaparuzaActive, setLalaparuzaActive] = useState(false);
+  const [lalaparuzaMatchups, setLalaparuzaMatchups] = useState<LalaparuzaMatchup[]>([]);
+  const [lalaparuzaBottomIds, setLalaparuzaBottomIds] = useState<number[]>([]);
 
   const generateChallenge = useCallback((challenge: Challenge) => {
       setCurrentChallenge(challenge);
@@ -1474,6 +1521,8 @@ export default function PokeDragRaceSimulator() {
       setProducerCardAssignments({});
       setProducerCardImpactLog([]);
       setProducerDraftMood(getRandomProducerMood());
+      setLalaparuzaMatchups([]);
+      setLalaparuzaBottomIds([]);
   }, [episodeCount, competitionFormat]);
 
   // --- Derived State ---
@@ -1516,6 +1565,21 @@ export default function PokeDragRaceSimulator() {
           setCurrentStoryline('All the eliminated queens storm back into the werkroom for REVENGE OF THE QUEENS!');
       }
   }, [competitionFormat, phase, episodeCount, revengeEpisodeTriggered, cast, activeQueens]);
+
+  useEffect(() => {
+      if (
+          competitionFormat === 'standard' &&
+          phase === 'CHALLENGE_SELECTION' &&
+          episodeCount >= 6 &&
+          !lalaparuzaTriggered &&
+          !splitPremiere &&
+          activeQueens.length >= 6
+      ) {
+          setLalaparuzaTriggered(true);
+          setLalaparuzaActive(true);
+          setCurrentStoryline('RuPaul announces a LaLaPaRuZa Lip Sync Smackdown—no one is safe!');
+      }
+  }, [competitionFormat, phase, episodeCount, lalaparuzaTriggered, splitPremiere, activeQueens]);
 
   // For split premiere, we only want queens in the current episode's group
   const revengeReturnees = useMemo(
@@ -1581,6 +1645,12 @@ export default function PokeDragRaceSimulator() {
       setProducerCardAssignments({});
       setProducerDraftMood('');
       setProducerCardImpactLog([]);
+      setChocolateBarTwist(false);
+      setGoldenChocolateId(null);
+      setLalaparuzaTriggered(false);
+      setLalaparuzaActive(false);
+      setLalaparuzaMatchups([]);
+      setLalaparuzaBottomIds([]);
       setCast([]);
       setCurrentChallenge(null);
       setCurrentStoryline('');
@@ -1615,6 +1685,18 @@ export default function PokeDragRaceSimulator() {
           }));
       }
 
+      if (chocolateBarTwist) {
+          const goldenIndex = Math.floor(Math.random() * newCast.length);
+          newCast = newCast.map((queen, idx) => ({
+              ...queen,
+              chocolateStatus: idx === goldenIndex ? 'golden' : 'standard',
+          }));
+          setGoldenChocolateId(newCast[goldenIndex].id);
+      } else {
+          newCast = newCast.map(queen => ({ ...queen, chocolateStatus: 'standard' }));
+          setGoldenChocolateId(null);
+      }
+
       setCast(newCast);
       setEpisodeCount(1);
       setPhase('ENTRANCES');
@@ -1638,6 +1720,10 @@ export default function PokeDragRaceSimulator() {
       setProducerCardAssignments({});
       setProducerDraftMood('');
       setProducerCardImpactLog([]);
+      setLalaparuzaTriggered(false);
+      setLalaparuzaActive(false);
+      setLalaparuzaMatchups([]);
+      setLalaparuzaBottomIds([]);
   };
 
   const playProducerCardOnQueen = (queenId: number, cardId: string) => {
@@ -1726,6 +1812,14 @@ export default function PokeDragRaceSimulator() {
       }
   }, [revengeEpisodeActive, phase, currentChallenge, generateChallenge]);
 
+  useEffect(() => {
+      if (lalaparuzaActive && phase === 'CHALLENGE_SELECTION') {
+          if (!currentChallenge || currentChallenge.name !== LALAPARUZA_CHALLENGE.name) {
+              generateChallenge(LALAPARUZA_CHALLENGE);
+          }
+      }
+  }, [lalaparuzaActive, phase, currentChallenge, generateChallenge]);
+
   const generateInitialPlacements = () => {
     if (!currentChallenge) return;
 
@@ -1746,6 +1840,113 @@ export default function PokeDragRaceSimulator() {
         cardImpacts.push({ queenId, cardId: card.id, swing });
     });
     setProducerCardImpactLog(cardImpacts);
+
+    if (lalaparuzaActive) {
+        const placements: Record<number, Placement> = {};
+        const matchups: LalaparuzaMatchup[] = [];
+        const pool = [...currentEpisodeQueens].sort(() => Math.random() - 0.5);
+        const losers: { queen: Queen; score: number }[] = [];
+        const winners: { queen: Queen; score: number }[] = [];
+
+        if (pool.length % 2 === 1) {
+            const byeQueen = pool.pop();
+            if (byeQueen) {
+                placements[byeQueen.id] = 'SAFE';
+                setCurrentStoryline(`${byeQueen.name} snatches a bye and lounges while the smackdown begins.`);
+            }
+        }
+
+        const buildScore = (queen: Queen) => {
+            const base = calculatePerformance(queen, currentChallenge, modifiers);
+            return base + queen.stats.lipsync * 0.5 + Math.random() * 2;
+        };
+
+        while (pool.length >= 2) {
+            const a = pool.shift();
+            const b = pool.shift();
+            if (!a || !b) break;
+            const aScore = buildScore(a);
+            const bScore = buildScore(b);
+            if (aScore === bScore) {
+                // tiny shake-up to avoid ties
+                const shake = Math.random() > 0.5 ? 0.1 : -0.1;
+                if (shake > 0) {
+                    winners.push({ queen: a, score: aScore + shake });
+                    losers.push({ queen: b, score: bScore - shake });
+                } else {
+                    winners.push({ queen: b, score: bScore - shake });
+                    losers.push({ queen: a, score: aScore + shake });
+                }
+            } else if (aScore > bScore) {
+                winners.push({ queen: a, score: aScore });
+                losers.push({ queen: b, score: bScore });
+            } else {
+                winners.push({ queen: b, score: bScore });
+                losers.push({ queen: a, score: aScore });
+            }
+
+            const winnerEntry = winners[winners.length - 1];
+            const loserEntry = losers[losers.length - 1];
+            matchups.push({
+                queens: [a.id, b.id],
+                winnerId: winnerEntry.queen.id,
+                winningScore: winnerEntry.score,
+                losingScore: loserEntry.score,
+            });
+        }
+
+        const sortedWinners = winners.slice().sort((a, b) => b.score - a.score);
+        const sortedLosers = losers.slice().sort((a, b) => a.score - b.score);
+
+        sortedWinners.forEach(({ queen }) => {
+            placements[queen.id] = 'SAFE';
+        });
+
+        if (sortedWinners.length > 0) {
+            const champion = sortedWinners[0].queen;
+            placements[champion.id] = 'WIN';
+        }
+
+        const bottomTwo = sortedLosers.slice(0, 2).map(entry => entry.queen.id);
+        setLalaparuzaBottomIds(bottomTwo);
+
+        sortedLosers.forEach(({ queen }, index) => {
+            if (bottomTwo.includes(queen.id)) {
+                placements[queen.id] = 'BTM2';
+            } else {
+                placements[queen.id] = 'LOW';
+            }
+        });
+
+        currentEpisodeQueens.forEach(queen => {
+            if (!placements[queen.id]) {
+                placements[queen.id] = 'SAFE';
+            }
+        });
+
+        setLalaparuzaMatchups(matchups);
+
+        if (sortedWinners.length > 0 && bottomTwo.length === 2) {
+            const champName = sortedWinners[0].queen.name;
+            const bottomNames = bottomTwo
+                .map(id => currentEpisodeQueens.find(q => q.id === id)?.name)
+                .filter(Boolean)
+                .join(' & ');
+            if (bottomNames) {
+                setCurrentStoryline(`${champName} devours the LaLaPaRuZa while ${bottomNames} must lip sync for their lives.`);
+            }
+        }
+
+        if (bottomTwo.length === 2) {
+            const pairQueens = bottomTwo
+                .map(id => currentEpisodeQueens.find(q => q.id === id))
+                .filter(Boolean) as Queen[];
+            setLipsyncPair(pairQueens);
+        }
+
+        setUnsavedPlacements(placements);
+        return;
+    }
 
     if (revengeEpisodeActive) {
         const pairDetails = revengePairings
@@ -1938,7 +2139,7 @@ export default function PokeDragRaceSimulator() {
   const generateUntuckedDrama = () => {
     const isSplitNonElim = splitPremiere && episodeCount <= 2;
     const safeQueens = currentEpisodeQueens.filter(q => ['SAFE', 'HIGH', 'WIN', 'WIN+RTRN', 'WIN+OUT'].includes(unsavedPlacements[q.id]));
-    const bottomQueens = currentEpisodeQueens.filter(q => ['LOW', 'BTM2'].includes(unsavedPlacements[q.id]));
+    const bottomQueens = currentEpisodeQueens.filter(q => ['LOW', 'BTM2', 'CHOCOLATE'].includes(unsavedPlacements[q.id]));
     const top2Queens = currentEpisodeQueens.filter(q => ['TOP2', 'WIN', 'WIN+RTRN', 'WIN+OUT'].includes(unsavedPlacements[q.id]));
 
     if (isSplitNonElim && top2Queens.length >= 2) {
@@ -2168,6 +2369,11 @@ export default function PokeDragRaceSimulator() {
         if (doubleShantayUsed) { alert("Already used!"); return; }
         setDoubleShantayUsed(true);
         setCurrentStoryline("Shantay you BOTH stay! (Double Shantay used)");
+        if (lalaparuzaActive) {
+            setLalaparuzaActive(false);
+            setLalaparuzaMatchups([]);
+            setLalaparuzaBottomIds([]);
+        }
         setPhase('ELIMINATION');
         return;
     }
@@ -2205,6 +2411,42 @@ export default function PokeDragRaceSimulator() {
     const loserId = lipsyncPair.find(q => q.id !== winnerId)?.id;
     if (!loserId) return;
 
+    const loser = cast.find(c => c.id === loserId);
+
+    if (!isSplitNonElim && chocolateBarTwist && loser?.chocolateStatus === 'golden') {
+        setCast(prev => prev.map(q => {
+            if (q.id === loserId) {
+                const tr = [...q.trackRecord];
+                tr[tr.length - 1] = 'CHOCOLATE';
+                return {
+                    ...q,
+                    trackRecord: tr,
+                    chocolateStatus: 'revealed',
+                    confessionals: [
+                        'I pulled the golden chocolate bar! The competition is shaken.',
+                        ...q.confessionals,
+                    ].slice(0, 10),
+                };
+            }
+            return q;
+        }));
+        setLatestResults(prev => ({
+            ...prev,
+            [loserId]: 'CHOCOLATE',
+        }));
+        setUnsavedPlacements(prev => ({
+            ...prev,
+            [loserId]: 'CHOCOLATE',
+        }));
+        setGoldenChocolateId(null);
+        setCurrentStoryline(`${loser?.name} reveals the golden chocolate bar—shantay you stay!`);
+        setLalaparuzaActive(false);
+        setLalaparuzaMatchups([]);
+        setLalaparuzaBottomIds([]);
+        setPhase('ELIMINATION');
+        return;
+    }
+
     setCast(prev => prev.map(q => {
       if (q.id === winnerId && isSplitNonElim) {
           // Upgrade TOP2 to WIN
@@ -2222,6 +2464,11 @@ export default function PokeDragRaceSimulator() {
     }));
     
     setPhase('ELIMINATION');
+    if (lalaparuzaActive) {
+        setLalaparuzaActive(false);
+        setLalaparuzaMatchups([]);
+        setLalaparuzaBottomIds([]);
+    }
     if (isSplitNonElim) {
          const winner = cast.find(c => c.id === winnerId);
          setCurrentStoryline(`Condragulations ${winner?.name}, you're the winner of this week's challenge!`);
@@ -2304,6 +2551,7 @@ export default function PokeDragRaceSimulator() {
                  'HIGH': { backgroundColor: 'lightblue' },
                  'LOW': { backgroundColor: 'lightpink' },
                  'BTM2': { backgroundColor: 'tomato' },
+                 'CHOCOLATE': { backgroundColor: '#a16207' },
                  'OUT': { backgroundColor: '#6b7280' },
                  'ELIM': { backgroundColor: 'darkred' },
                  'N/A': { backgroundColor: '#e5e7eb', opacity: 0.3 }
@@ -2325,6 +2573,7 @@ export default function PokeDragRaceSimulator() {
       'HIGH': { backgroundColor: 'lightblue', borderColor: 'deepskyblue', color: 'darkblue' },
       'LOW': { backgroundColor: 'lightpink', borderColor: 'pink', color: 'darkred' },
       'BTM2': { backgroundColor: 'tomato', borderColor: 'orangered', color: 'white' },
+      'CHOCOLATE': { backgroundColor: '#a16207', borderColor: '#854d0e', color: '#fff8dc', fontWeight: 'bold' },
       'SAFE': { backgroundColor: '#e5e7eb', borderColor: '#9ca3af', color: '#374151' },
       'OUT': { backgroundColor: '#6b7280', borderColor: '#4b5563', color: '#f9fafb', fontWeight: 'bold' },
       'ELIM': { backgroundColor: '#374151', borderColor: '#1f2937', color: '#f87171', fontWeight: 'bold' },
@@ -2564,10 +2813,19 @@ export default function PokeDragRaceSimulator() {
                         <p>{competitionFormat === 'allStars' ? 'Top two lip sync for their legacy each week.' : 'Bottom two lip sync for their lives.'}</p>
                         <p>{seasonMode === 'evolve' ? 'Queens debut in their first forms and can evolve up to their ultimate stage.' : 'Every queen enters at full power—no evolutions remaining.'}</p>
                     </div>
-                     <label className={`flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow cursor-pointer ${competitionFormat === 'allStars' ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                    <label className={`flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow cursor-pointer ${competitionFormat === 'allStars' ? 'opacity-40 cursor-not-allowed' : ''}`}>
                         <input type="checkbox" checked={splitPremiere} disabled={competitionFormat === 'allStars'} onChange={e => setSplitPremiere(e.target.checked)} className="w-5 h-5 text-pink-600" />
                         <span className="font-bold text-pink-800">Split Premiere (2 Non-Elim Episodes)</span>
                     </label>
+                    <label className="flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow cursor-pointer">
+                        <input type="checkbox" checked={chocolateBarTwist} onChange={e => setChocolateBarTwist(e.target.checked)} className="w-5 h-5 text-amber-600" />
+                        <span className="font-bold text-amber-700">Chocolate Bar Save Twist</span>
+                    </label>
+                    {chocolateBarTwist && (
+                        <div className="text-xs uppercase tracking-widest text-amber-600 bg-amber-50 px-4 py-2 rounded-full shadow-inner">
+                            One queen holds the golden bar. If she loses a lip sync, the bar may save her!
+                        </div>
+                    )}
                     {competitionFormat === 'allStars' && <div className="text-xs text-red-500 font-semibold">Split Premiere is unavailable in All Stars format.</div>}
                     <button onClick={finalizeCast} disabled={selectedCastIds.length < 4} className="bg-pink-600 text-white px-8 py-3 rounded-full font-bold text-xl disabled:opacity-50 hover:bg-pink-700 transition-colors">
                         Start Season
@@ -2737,6 +2995,50 @@ export default function PokeDragRaceSimulator() {
                      </div>
                  )}
               </div>
+              {lalaparuzaActive && lalaparuzaMatchups.length > 0 && (
+                  <div className="mt-8 w-full max-w-4xl bg-gradient-to-br from-fuchsia-100 via-pink-100 to-fuchsia-50 border border-fuchsia-200 rounded-3xl p-6 shadow-xl">
+                      <h3 className="text-xs uppercase tracking-[0.4em] text-fuchsia-600 mb-4 flex items-center gap-2">
+                          <Music className="text-fuchsia-500" /> Battle Card
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {lalaparuzaMatchups.map(match => {
+                              const queenA = cast.find(q => q.id === match.queens[0]);
+                              const queenB = cast.find(q => q.id === match.queens[1]);
+                              if (!queenA || !queenB) return null;
+                              return (
+                                  <div key={`${match.queens[0]}-${match.queens[1]}`} className="bg-white/80 backdrop-blur rounded-2xl border border-fuchsia-200 p-4">
+                                      <div className="flex items-center justify-between text-sm text-fuchsia-700 uppercase tracking-[0.3em]">Lip Sync Showdown</div>
+                                      <div className="mt-3 flex items-center justify-between gap-3">
+                                          <div className={`flex-1 flex items-center gap-3 ${match.winnerId === queenA.id ? 'opacity-100' : 'opacity-80'}`}>
+                                              <img src={getQueenImg(queenA.dexId)} className={`w-12 h-12 rounded-full border-2 ${match.winnerId === queenA.id ? 'border-fuchsia-400' : 'border-gray-200'}`} />
+                                              <div>
+                                                  <div className="font-semibold text-fuchsia-900">{queenA.name}</div>
+                                                  {match.winnerId === queenA.id && <div className="text-[10px] text-fuchsia-600 uppercase tracking-[0.3em]">Wins the round</div>}
+                                              </div>
+                                          </div>
+                                          <span className="text-xs font-bold text-gray-500">VS</span>
+                                          <div className={`flex-1 flex items-center gap-3 ${match.winnerId === queenB.id ? 'opacity-100' : 'opacity-80'}`}>
+                                              <img src={getQueenImg(queenB.dexId)} className={`w-12 h-12 rounded-full border-2 ${match.winnerId === queenB.id ? 'border-fuchsia-400' : 'border-gray-200'}`} />
+                                              <div>
+                                                  <div className="font-semibold text-fuchsia-900">{queenB.name}</div>
+                                                  {match.winnerId === queenB.id && <div className="text-[10px] text-fuchsia-600 uppercase tracking-[0.3em]">Wins the round</div>}
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </div>
+                              );
+                          })}
+                      </div>
+                      {lalaparuzaBottomIds.length === 2 && (
+                          <p className="mt-4 text-sm text-fuchsia-700 text-center uppercase tracking-[0.4em]">
+                              Bottom showdown: {lalaparuzaBottomIds
+                                  .map(id => cast.find(q => q.id === id)?.name)
+                                  .filter(Boolean)
+                                  .join(' vs ')}
+                          </p>
+                      )}
+                  </div>
+              )}
               <ProducerDraftPanel />
           </div>
         )}
@@ -2804,7 +3106,7 @@ export default function PokeDragRaceSimulator() {
                                         >
                                             {(splitPremiere && episodeCount <= 2)
                                                 ? ['WIN', 'TOP2', 'HIGH', 'SAFE', 'LOW'].map(p => <option key={p} value={p}>{p}</option>)
-                                                : ['WIN', 'WIN+RTRN', 'WIN+OUT', 'TOP2', 'HIGH', 'SAFE', 'LOW', 'BTM2', 'OUT'].map(p => <option key={p} value={p}>{p}</option>)}
+                                                : ['WIN', 'WIN+RTRN', 'WIN+OUT', 'TOP2', 'HIGH', 'SAFE', 'LOW', 'BTM2', 'CHOCOLATE', 'OUT'].map(p => <option key={p} value={p}>{p}</option>)}
                                         </select>
                                     </div>
                                     <div className="flex items-center justify-between text-xs text-gray-300">
@@ -2855,7 +3157,7 @@ export default function PokeDragRaceSimulator() {
 
             <div className="grid gap-3">
               {currentEpisodeQueens.sort((a,b) => {
-                  const order = { 'WIN': 0, 'WIN+RTRN': 1, 'WIN+OUT': 2, 'TOP2': 3, 'HIGH': 4, 'SAFE': 5, 'LOW': 6, 'BTM2': 7, 'OUT': 8 } as Record<Placement, number>;
+                  const order = { 'WIN': 0, 'WIN+RTRN': 1, 'WIN+OUT': 2, 'TOP2': 3, 'HIGH': 4, 'SAFE': 5, 'LOW': 6, 'BTM2': 7, 'CHOCOLATE': 7.5, 'OUT': 8 } as Record<Placement, number>;
                   return (order[unsavedPlacements[a.id] as keyof typeof order] || 4) - (order[unsavedPlacements[b.id] as keyof typeof order] || 4);
               }).map(queen => (
                 <div key={queen.id} className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border-l-4 border-pink-300">
@@ -2885,6 +3187,7 @@ export default function PokeDragRaceSimulator() {
                         SAFE: 5,
                         LOW: 6,
                         BTM2: 7,
+                        CHOCOLATE: 7.5,
                         OUT: 8,
                         ELIM: 9,
                         'RUNNER-UP': 10,
@@ -2899,7 +3202,7 @@ export default function PokeDragRaceSimulator() {
             const topTwo = entries.filter(e => e.placement === 'TOP2');
             const highs = entries.filter(e => e.placement === 'HIGH');
             const safes = entries.filter(e => e.placement === 'SAFE');
-            const dangers = entries.filter(e => ['LOW', 'BTM2', 'OUT', 'ELIM'].includes(e.placement));
+            const dangers = entries.filter(e => ['LOW', 'BTM2', 'CHOCOLATE', 'OUT', 'ELIM'].includes(e.placement));
 
             const headline = winners.length
                 ? `Condragulations ${winners.map(w => w.queen.name).join(' & ')}!`
@@ -2922,6 +3225,8 @@ export default function PokeDragRaceSimulator() {
                     return { queen, card, swing: entry.swing };
                 })
                 .filter(Boolean) as { queen: Queen; card: ProducerCard; swing: number }[];
+            const chocolateHolder = chocolateBarTwist ? cast.find(q => q.chocolateStatus === 'golden') : null;
+            const chocolateReveal = chocolateBarTwist ? cast.find(q => q.chocolateStatus === 'revealed') : null;
 
             return (
                 <div className="space-y-8 max-w-6xl mx-auto">
@@ -2978,6 +3283,30 @@ export default function PokeDragRaceSimulator() {
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        )}
+                        {chocolateBarTwist && (
+                            <div className="bg-gradient-to-br from-amber-200 via-yellow-200 to-amber-100 rounded-3xl p-6 shadow-xl border border-amber-400/60">
+                                <h3 className="text-xs uppercase tracking-widest text-amber-700 flex items-center gap-2"><Candy className="text-amber-500" size={16} /> Golden Chocolate Watch</h3>
+                                {chocolateReveal ? (
+                                    <div className="flex items-center space-x-3 mt-3">
+                                        <img src={getQueenImg(chocolateReveal.dexId)} className="w-14 h-14 rounded-full border-2 border-amber-500 bg-white" />
+                                        <div>
+                                            <div className="font-bold text-lg text-amber-900">{chocolateReveal.name}</div>
+                                            <div className="text-xs uppercase tracking-widest text-amber-600">Golden bar revealed!</div>
+                                        </div>
+                                    </div>
+                                ) : chocolateHolder ? (
+                                    <div className="flex items-center space-x-3 mt-3">
+                                        <img src={getQueenImg(chocolateHolder.dexId)} className="w-14 h-14 rounded-full border-2 border-amber-400 bg-white" />
+                                        <div>
+                                            <div className="font-bold text-lg text-amber-900">{chocolateHolder.name}</div>
+                                            <div className="text-xs uppercase tracking-widest text-amber-600">Still hiding a secret bar...</div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-amber-700 mt-3">The bars are gone—but the werkroom is still buzzing about the twist.</p>
+                                )}
                             </div>
                         )}
                     </div>

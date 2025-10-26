@@ -1040,6 +1040,100 @@ const PLACEMENT_POINTS: Record<Placement, number> = {
 
 const STAT_CATEGORIES: StatCategory[] = ['acting', 'improv', 'comedy', 'dance', 'design', 'singing', 'rusical', 'rumix', 'makeover', 'lipsync'];
 
+type ProducerCardTone = 'boost' | 'sabotage' | 'wild';
+
+type ProducerCard = {
+    id: string;
+    label: string;
+    description: string;
+    modifier: number;
+    tone: ProducerCardTone;
+    flair: string;
+    icon: React.ReactNode;
+};
+
+type ProducerImpact = {
+    queenId: number;
+    cardId: string;
+    swing: number;
+};
+
+const PRODUCER_CARD_LIBRARY: ProducerCard[] = [
+    {
+        id: 'glitterbomb',
+        label: 'Glitter Bomb Advantage',
+        description: 'Drench a diva in sponsor glitter for a dazzling performance surge.',
+        modifier: 3,
+        tone: 'boost',
+        flair: '{queen} gets showered in glitter and the judges gag for it.',
+        icon: <Sparkles className="text-yellow-400" size={28} />,
+    },
+    {
+        id: 'soundcheck',
+        label: 'Sabotaged Soundcheck',
+        description: 'Cut the mic cables and shake a rival before the main stage.',
+        modifier: -3,
+        tone: 'sabotage',
+        flair: '{queen} just lost her soundcheck—the panic is real!',
+        icon: <Mic className="text-rose-500" size={28} />,
+    },
+    {
+        id: 'seamstress',
+        label: 'Secret Seamstress',
+        description: 'Fly in a last-minute tailor to snatch that runway look.',
+        modifier: 2,
+        tone: 'boost',
+        flair: '{queen} scores a secret seamstress and the outfit is cinched to the gods.',
+        icon: <Scissors className="text-emerald-500" size={28} />,
+    },
+    {
+        id: 'shade-edit',
+        label: 'Shady Confessional Leak',
+        description: 'Leak a messy confessional to rattle a frontrunner.',
+        modifier: -2,
+        tone: 'sabotage',
+        flair: '{queen} hears the shady confessional leak and storms the werkroom.',
+        icon: <MessageSquare className="text-purple-500" size={28} />,
+    },
+    {
+        id: 'chaos-wheel',
+        label: 'Wheel of Chaos',
+        description: 'Spin the chaos wheel for a wild swing in performance energy.',
+        modifier: 4,
+        tone: 'wild',
+        flair: '{queen} spins the Wheel of Chaos—hold onto your wig!',
+        icon: <RefreshCw className="text-indigo-500" size={28} />,
+    },
+    {
+        id: 'fan-hotline',
+        label: 'Fan Favorite Hotline',
+        description: 'Mobilize the stan armies for a charisma boost from the crowd.',
+        modifier: 2,
+        tone: 'boost',
+        flair: '{queen} trends worldwide as the stan hotline lights up.',
+        icon: <HeartCrack className="text-pink-500" size={28} />,
+    },
+];
+
+const PRODUCER_DRAFT_VIBES = [
+    'The meddling deck is sizzling—play your cards before the queens hit the stage.',
+    'Producers whisper: “Let’s shake the table this week.”',
+    'Stan Twitter is watching—stack the odds for drama.',
+    'The werkroom cameras are rolling. Time to rig it with flair.',
+];
+
+const drawProducerCards = (count: number) =>
+    [...PRODUCER_CARD_LIBRARY]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, Math.max(0, Math.min(count, PRODUCER_CARD_LIBRARY.length)));
+
+const getRandomProducerMood = () =>
+    PRODUCER_DRAFT_VIBES[Math.floor(Math.random() * PRODUCER_DRAFT_VIBES.length)] ?? PRODUCER_DRAFT_VIBES[0];
+
+const findProducerCardById = (id: string) => PRODUCER_CARD_LIBRARY.find(card => card.id === id);
+
+const applyFlairTemplate = (template: string, queenName: string) => template.replace('{queen}', queenName);
+
 type PPEChartEntry = {
     name: string;
     fullName: string;
@@ -1168,6 +1262,169 @@ const summarizePlacements = (trackRecord: Placement[]) => {
 
 const formatPPE = (ppe: number) => (Number.isFinite(ppe) ? ppe.toFixed(2) : '0.00');
 
+type FanPulseEntry = {
+    queen: Queen;
+    placement: Placement;
+    approval: number;
+};
+
+type FanPulseData = {
+    mood: string;
+    tagline: string;
+    ticker: string[];
+    stans: FanPulseEntry[];
+    drags: FanPulseEntry[];
+};
+
+const FAN_APPROVAL_BASE: Record<Placement, number> = {
+    WIN: 96,
+    'WIN+RTRN': 94,
+    'WIN+OUT': 92,
+    TOP2: 88,
+    HIGH: 82,
+    SAFE: 66,
+    LOW: 58,
+    BTM2: 44,
+    OUT: 30,
+    ELIM: 24,
+    'RUNNER-UP': 70,
+    'WINNER': 98,
+    'N/A': 50,
+    '': 50,
+};
+
+const FAN_TICKER_SNARKS = [
+    '{name} is trending worldwide after that gag-worthy moment.',
+    'Comment sections are split on {name}—expect fireworks next week.',
+    'Fan cams of {name} are flooding the timeline right now.',
+    'The fanbase demands justice for {name} this episode.',
+    'Everyone is quoting {name}\'s confessional already.',
+];
+
+const buildFanPulse = (
+    results: Record<number, Placement>,
+    cast: Queen[],
+    episode: number,
+    challenge: Challenge | null
+): FanPulseData | null => {
+    const entries = Object.entries(results)
+        .map(([id, placement]) => {
+            const queen = cast.find(q => q.id === Number(id));
+            if (!queen) return null;
+            return { queen, placement };
+        })
+        .filter(Boolean) as { queen: Queen; placement: Placement }[];
+
+    if (entries.length === 0) return null;
+
+    const scored = entries.map(entry => {
+        const base = FAN_APPROVAL_BASE[entry.placement] ?? 60;
+        const swing = Math.random() * 14 - 7;
+        const approval = Math.max(5, Math.min(100, base + swing));
+        return { ...entry, approval };
+    });
+
+    const stans = scored
+        .filter(entry => entry.approval >= 70)
+        .sort((a, b) => b.approval - a.approval)
+        .slice(0, 3);
+
+    const drags = scored
+        .filter(entry => entry.approval < 60)
+        .sort((a, b) => a.approval - b.approval)
+        .slice(0, 3);
+
+    const average = scored.reduce((sum, entry) => sum + entry.approval, 0) / scored.length;
+
+    const mood = average >= 85
+        ? 'Stan Twitter is screaming in all caps!'
+        : average >= 70
+            ? 'The fandom is buzzing—no one can agree on a winner.'
+            : average >= 55
+                ? 'Comment sections are getting shady, producers.'
+                : 'Uh oh... the fandom is in meltdown mode.';
+
+    const tagline = `Fan pulse after Episode ${episode}: ${challenge?.name ?? 'Main Stage Showdown'}`;
+
+    const ticker = scored
+        .slice()
+        .sort(() => Math.random() - 0.5)
+        .slice(0, Math.min(4, scored.length))
+        .map(entry => {
+            const template = FAN_TICKER_SNARKS[Math.floor(Math.random() * FAN_TICKER_SNARKS.length)] ?? '{name} is making headlines.';
+            return template.replace('{name}', entry.queen.name);
+        });
+
+    return { mood, tagline, ticker, stans, drags };
+};
+
+type PressureReading = {
+    queenId: number;
+    score: number;
+    label: string;
+    color: string;
+    commentary: string;
+};
+
+const calculatePressureReading = (queen: Queen): PressureReading => {
+    const recent = queen.trackRecord.slice(-5);
+    let score = 25;
+    let streak = 0;
+
+    for (let i = recent.length - 1; i >= 0; i -= 1) {
+        const placement = recent[i];
+        if (['LOW', 'BTM2', 'OUT', 'ELIM'].includes(placement)) {
+            streak += 1;
+            score += 18 + streak * 4;
+        } else if (placement === 'SAFE') {
+            score += 6;
+            streak = 0;
+        } else if (['WIN', 'WIN+RTRN', 'WIN+OUT', 'TOP2', 'HIGH'].includes(placement)) {
+            score -= 6;
+            streak = 0;
+        }
+    }
+
+    const lifetimeBottoms = queen.trackRecord.filter(p => ['BTM2', 'OUT', 'ELIM'].includes(p)).length;
+    score += lifetimeBottoms * 4;
+    score = Math.max(5, Math.min(100, score));
+
+    if (score >= 85) {
+        return {
+            queenId: queen.id,
+            score,
+            label: 'Meltdown Alert',
+            color: '#ef4444',
+            commentary: 'Producers smell blood in the water—expect chaos.',
+        };
+    }
+    if (score >= 65) {
+        return {
+            queenId: queen.id,
+            score,
+            label: 'Pressure Cooker',
+            color: '#f97316',
+            commentary: 'Nerves are showing under the lights.',
+        };
+    }
+    if (score >= 45) {
+        return {
+            queenId: queen.id,
+            score,
+            label: 'Simmering',
+            color: '#facc15',
+            commentary: 'Cracks are forming, but the fight is still on.',
+        };
+    }
+    return {
+        queenId: queen.id,
+        score,
+        label: 'Unbothered',
+        color: '#22c55e',
+        commentary: 'Calm, cool, and ready to keep serving.',
+    };
+};
+
 // --- Main Component ---
 
 export default function PokeDragRaceSimulator() {
@@ -1201,6 +1458,10 @@ export default function PokeDragRaceSimulator() {
   const [revengeTopReturneeIds, setRevengeTopReturneeIds] = useState<number[]>([]);
   const [revengeBottomIds, setRevengeBottomIds] = useState<number[]>([]);
   const [revengePairings, setRevengePairings] = useState<{ returneeId: number; partnerId: number }[]>([]);
+  const [availableProducerCards, setAvailableProducerCards] = useState<ProducerCard[]>([]);
+  const [producerCardAssignments, setProducerCardAssignments] = useState<Record<number, ProducerCard>>({});
+  const [producerDraftMood, setProducerDraftMood] = useState<string>('');
+  const [producerCardImpactLog, setProducerCardImpactLog] = useState<ProducerImpact[]>([]);
 
   const generateChallenge = useCallback((challenge: Challenge) => {
       setCurrentChallenge(challenge);
@@ -1208,7 +1469,12 @@ export default function PokeDragRaceSimulator() {
       setLatestResults({});
       setChallengeHistory(prev => [...prev, challenge]);
       setCurrentStoryline(`Episode ${episodeCount}: The queens prepare for the ${challenge.name}.`);
-  }, [episodeCount]);
+      const cardCount = competitionFormat === 'allStars' ? 4 : 3;
+      setAvailableProducerCards(drawProducerCards(cardCount));
+      setProducerCardAssignments({});
+      setProducerCardImpactLog([]);
+      setProducerDraftMood(getRandomProducerMood());
+  }, [episodeCount, competitionFormat]);
 
   // --- Derived State ---
   const activeQueens = useMemo(() => cast.filter(q => q.status === 'active'), [cast]);
@@ -1275,6 +1541,10 @@ export default function PokeDragRaceSimulator() {
   }, [activeQueens, splitPremiere, episodeCount, revengeEpisodeActive, revengeReturnees]);
 
   const eliminatedQueens = useMemo(() => cast.filter(q => q.status === 'eliminated'), [cast]);
+  const latestFanPulse = useMemo(
+      () => buildFanPulse(latestResults, cast, episodeCount, currentChallenge),
+      [latestResults, cast, episodeCount, currentChallenge]
+  );
   const evolvableQueens = useMemo(
       () => currentEpisodeQueens.filter(q =>
           q.evolutionLine && (q.evolutionStage ?? 0) < q.evolutionLine.length - 1
@@ -1307,6 +1577,14 @@ export default function PokeDragRaceSimulator() {
       setRevengeTopReturneeIds([]);
       setRevengeBottomIds([]);
       setRevengePairings([]);
+      setAvailableProducerCards([]);
+      setProducerCardAssignments({});
+      setProducerDraftMood('');
+      setProducerCardImpactLog([]);
+      setCast([]);
+      setCurrentChallenge(null);
+      setCurrentStoryline('');
+      setEpisodeCount(1);
   }
 
   const toggleQueenSelection = (id: number) => {
@@ -1356,6 +1634,37 @@ export default function PokeDragRaceSimulator() {
       setRevengeTopReturneeIds([]);
       setRevengeBottomIds([]);
       setRevengePairings([]);
+      setAvailableProducerCards([]);
+      setProducerCardAssignments({});
+      setProducerDraftMood('');
+      setProducerCardImpactLog([]);
+  };
+
+  const playProducerCardOnQueen = (queenId: number, cardId: string) => {
+      const queen = currentEpisodeQueens.find(q => q.id === queenId);
+      const card = availableProducerCards.find(c => c.id === cardId) || findProducerCardById(cardId);
+      if (!queen || !card) return;
+
+      const updatedAssignments: Record<number, ProducerCard> = { ...producerCardAssignments };
+      const existingHolder = Object.entries(updatedAssignments).find(([, assigned]) => assigned.id === cardId);
+      if (existingHolder) {
+          delete updatedAssignments[Number(existingHolder[0])];
+      }
+
+      if (producerCardAssignments[queenId]?.id === cardId) {
+          delete updatedAssignments[queenId];
+          setProducerCardAssignments(updatedAssignments);
+          setCurrentStoryline(`${queen.name} hands back the ${card.label}. Producers rethink the plan.`);
+          return;
+      }
+
+      if (producerCardAssignments[queenId]) {
+          delete updatedAssignments[queenId];
+      }
+
+      updatedAssignments[queenId] = card;
+      setProducerCardAssignments(updatedAssignments);
+      setCurrentStoryline(applyFlairTemplate(card.flair, queen.name));
   };
 
   const nextPhase = () => {
@@ -1423,6 +1732,20 @@ export default function PokeDragRaceSimulator() {
     const modifiers: Record<number, number> = {};
     const isSplitNonElim = splitPremiere && episodeCount <= 2;
     const isAllStarsEpisode = competitionFormat === 'allStars' && !isSplitNonElim;
+
+    const cardImpacts: ProducerImpact[] = [];
+    Object.entries(producerCardAssignments).forEach(([id, card]) => {
+        const queenId = Number(id);
+        if (!currentEpisodeQueens.some(q => q.id === queenId)) {
+            return;
+        }
+        const swing = card.tone === 'wild'
+            ? (Math.random() > 0.5 ? card.modifier : -card.modifier)
+            : card.modifier;
+        modifiers[queenId] = (modifiers[queenId] || 0) + swing;
+        cardImpacts.push({ queenId, cardId: card.id, swing });
+    });
+    setProducerCardImpactLog(cardImpacts);
 
     if (revengeEpisodeActive) {
         const pairDetails = revengePairings
@@ -2017,6 +2340,130 @@ export default function PokeDragRaceSimulator() {
     );
   };
 
+  const ProducerDraftPanel = () => {
+    if (!currentChallenge) {
+        return null;
+    }
+
+    if (availableProducerCards.length === 0) {
+        return (
+            <div className="max-w-4xl mx-auto mt-10 bg-white/70 border border-pink-100 rounded-3xl p-6 text-center text-sm text-gray-500 shadow-sm">
+                Producer cards unlock once a challenge is selected. Lock in the episode to stack the deck.
+            </div>
+        );
+    }
+
+    const assignments = Object.entries(producerCardAssignments);
+
+    return (
+        <div className="w-full max-w-5xl mt-10">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h3 className="text-xl font-extrabold text-pink-900 flex items-center gap-2">
+                        <Zap className="text-yellow-500" /> Backstage Sabotage Draft
+                    </h3>
+                    <p className="text-sm text-pink-700/80 mt-1">
+                        {producerDraftMood || 'Deal out boosts or chaos before the queens hit the main stage.'}
+                    </p>
+                </div>
+                <button
+                    onClick={() => setProducersMode(prev => !prev)}
+                    className={`self-start md:self-center px-4 py-2 rounded-full text-sm font-bold border transition-colors ${producersMode ? 'bg-red-600 text-white border-red-500' : 'bg-white text-pink-700 border-pink-300 hover:bg-pink-50'}`}
+                >
+                    {producersMode ? 'Hide Producer Deck' : 'Open Producer Deck'}
+                </button>
+            </div>
+
+            {producersMode ? (
+                <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    {availableProducerCards.map(card => {
+                        const assignedEntry = assignments.find(([, assigned]) => assigned.id === card.id);
+                        const assignedQueenId = assignedEntry ? Number(assignedEntry[0]) : null;
+                        const assignedQueen = assignedQueenId ? cast.find(q => q.id === assignedQueenId) : undefined;
+                        const effectLabel = card.tone === 'wild'
+                            ? `±${card.modifier}`
+                            : `${card.modifier > 0 ? '+' : ''}${card.modifier}`;
+                        const effectTone = card.tone === 'boost'
+                            ? 'text-emerald-400'
+                            : card.tone === 'sabotage'
+                                ? 'text-rose-300'
+                                : 'text-indigo-300';
+
+                        return (
+                            <div key={card.id} className="bg-white rounded-3xl p-6 border-2 border-pink-100 shadow-lg flex flex-col space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-pink-50 rounded-full p-3">{card.icon}</div>
+                                    <div>
+                                        <h4 className="font-bold text-lg text-pink-900">{card.label}</h4>
+                                        <p className="text-xs uppercase tracking-[0.3em] text-gray-400">{card.tone === 'boost' ? 'Boost' : card.tone === 'sabotage' ? 'Sabotage' : 'Chaos'}</p>
+                                    </div>
+                                </div>
+                                <p className="text-sm text-gray-600 leading-relaxed">{card.description}</p>
+                                <div className={`text-sm font-semibold ${effectTone}`}>Stage effect: {effectLabel}</div>
+                                <div className="bg-pink-50 rounded-2xl p-3 border border-pink-100">
+                                    <p className="text-[11px] uppercase tracking-[0.4em] text-pink-500 mb-2">Deploy on</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {currentEpisodeQueens.map(queen => {
+                                            const queenHasCard = producerCardAssignments[queen.id]?.id === card.id;
+                                            const disabled = assignedQueenId !== null && assignedQueenId !== queen.id;
+                                            return (
+                                                <button
+                                                    key={queen.id}
+                                                    onClick={() => playProducerCardOnQueen(queen.id, card.id)}
+                                                    disabled={disabled}
+                                                    className={`px-3 py-1 rounded-full text-xs font-bold transition ${queenHasCard ? 'bg-pink-600 text-white shadow-lg' : disabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white text-pink-700 border border-pink-200 hover:bg-pink-100'}`}
+                                                >
+                                                    {queen.name.split(' ')[0]}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                    {assignedQueen ? `Currently locked on ${assignedQueen.name}. Click their chip to release.` : 'No queen claimed this card yet—make it messy.'}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            ) : (
+                <div className="mt-6 bg-white/70 border border-pink-100 rounded-3xl p-6 text-sm text-gray-600 shadow-inner text-center">
+                    Toggle Producer Mode to assign sabotage or sparkle cards before critiques begin.
+                </div>
+            )}
+
+            {producersMode && assignments.length > 0 && (
+                <div className="mt-6 bg-gray-900 text-white rounded-3xl border border-gray-700 p-5">
+                    <h4 className="text-sm uppercase tracking-[0.4em] text-gray-300 mb-3">Active meddling</h4>
+                    <div className="space-y-3">
+                        {assignments.map(([queenId, card]) => {
+                            const queen = cast.find(q => q.id === Number(queenId));
+                            if (!queen) return null;
+                            return (
+                                <div key={queen.id} className="flex items-center justify-between bg-gray-800/70 rounded-2xl px-4 py-3">
+                                    <div className="flex items-center gap-3">
+                                        <img src={getQueenImg(queen.dexId)} className="w-10 h-10 rounded-full border border-gray-700" />
+                                        <div>
+                                            <p className="text-sm font-semibold">{queen.name}</p>
+                                            <p className="text-[11px] uppercase tracking-[0.3em] text-gray-400">{card.label}</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => playProducerCardOnQueen(queen.id, card.id)}
+                                        className="text-xs uppercase tracking-[0.3em] bg-red-500/80 hover:bg-red-500 text-white px-3 py-1 rounded-full"
+                                    >
+                                        Revoke
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+  };
+
   const GameScreen = () => (
     <div className="flex flex-col h-full">
       {/* Phase Indicator */}
@@ -2282,7 +2729,7 @@ export default function PokeDragRaceSimulator() {
                  </div>
                  <h2 className="text-4xl font-extrabold text-pink-900 uppercase tracking-tight">{currentChallenge.name}</h2>
                  <p className="text-2xl text-gray-700 font-light leading-relaxed">{currentChallenge.description}</p>
-                 
+
                  {phase === 'PERFORMANCE' && (
                      <div className="mt-8 p-6 bg-yellow-50 border-2 border-yellow-200 text-yellow-800 rounded-xl flex items-center justify-center space-x-4 animate-pulse">
                          <VideoIcon className="animate-bounce" />
@@ -2290,6 +2737,7 @@ export default function PokeDragRaceSimulator() {
                      </div>
                  )}
               </div>
+              <ProducerDraftPanel />
           </div>
         )}
 
@@ -2335,6 +2783,7 @@ export default function PokeDragRaceSimulator() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto">
                         {currentEpisodeQueens.map(queen => {
                             const summary = summarizePlacements(queen.trackRecord);
+                            const assignedCard = producerCardAssignments[queen.id];
                             return (
                                 <div key={queen.id} className="bg-gray-700 p-4 rounded-lg space-y-3">
                                     <div className="flex items-center justify-between">
@@ -2343,6 +2792,9 @@ export default function PokeDragRaceSimulator() {
                                             <div>
                                                 <span className="font-bold text-sm">{queen.name}</span>
                                                 <div className="text-[10px] uppercase tracking-widest text-gray-300">PPE {formatPPE(summary.ppe)} • Wins {summary.wins} • Bottoms {summary.bottoms}</div>
+                                                {assignedCard && (
+                                                    <div className="text-[10px] uppercase tracking-widest text-amber-300 mt-1">Producer Card: {assignedCard.label}</div>
+                                                )}
                                             </div>
                                         </div>
                                         <select
@@ -2457,6 +2909,20 @@ export default function PokeDragRaceSimulator() {
                         ? `${highs[0].queen.name} leads the pack!`
                         : 'Results are in!';
 
+            const pressureData = currentEpisodeQueens
+                .map(queen => ({ queen, reading: calculatePressureReading(queen) }))
+                .sort((a, b) => b.reading.score - a.reading.score);
+
+            const fanPulse = latestFanPulse;
+            const producerImpactEntries = producerCardImpactLog
+                .map(entry => {
+                    const queen = cast.find(q => q.id === entry.queenId);
+                    const card = findProducerCardById(entry.cardId);
+                    if (!queen || !card) return null;
+                    return { queen, card, swing: entry.swing };
+                })
+                .filter(Boolean) as { queen: Queen; card: ProducerCard; swing: number }[];
+
             return (
                 <div className="space-y-8 max-w-6xl mx-auto">
                     <div className="bg-white rounded-3xl shadow-2xl border border-pink-200 p-8 text-center relative overflow-hidden">
@@ -2522,6 +2988,108 @@ export default function PokeDragRaceSimulator() {
                             <div className="flex flex-wrap gap-3 mt-4">
                                 {safes.map(({ queen }) => (
                                     <span key={queen.id} className="bg-pink-50 border border-pink-100 px-4 py-2 rounded-full text-sm font-semibold text-pink-600 shadow-sm">{queen.name}</span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {fanPulse && (
+                            <div className="bg-indigo-900 text-white rounded-3xl border border-indigo-700 shadow-xl p-6 space-y-5 lg:col-span-2">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xs uppercase tracking-[0.5em] text-indigo-200">Fan Pulse Live</h3>
+                                    <Gem className="text-indigo-200" />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-extrabold">{fanPulse.mood}</p>
+                                    <p className="text-sm text-indigo-200/80 mt-1">{fanPulse.tagline}</p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <h4 className="text-xs uppercase tracking-[0.4em] text-indigo-300">Stan Cam</h4>
+                                        <div className="mt-2 space-y-2">
+                                            {fanPulse.stans.length > 0 ? fanPulse.stans.map(entry => (
+                                                <div key={entry.queen.id} className="flex items-center justify-between bg-indigo-800/60 rounded-xl px-3 py-2">
+                                                    <span className="font-semibold text-sm">{entry.queen.name}</span>
+                                                    <span className="text-xs font-bold text-indigo-100">{Math.round(entry.approval)}% ❤</span>
+                                                </div>
+                                            )) : (
+                                                <div className="text-xs text-indigo-200/70">The crowd is waiting to be impressed.</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-xs uppercase tracking-[0.4em] text-indigo-300">Shady Corner</h4>
+                                        <div className="mt-2 space-y-2">
+                                            {fanPulse.drags.length > 0 ? fanPulse.drags.map(entry => (
+                                                <div key={entry.queen.id} className="flex items-center justify-between bg-indigo-800/40 rounded-xl px-3 py-2">
+                                                    <span className="font-semibold text-sm">{entry.queen.name}</span>
+                                                    <span className="text-xs font-bold text-rose-200">{Math.round(entry.approval)}% 😬</span>
+                                                </div>
+                                            )) : (
+                                                <div className="text-xs text-indigo-200/70">No major draggings... yet.</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-indigo-800/60 rounded-2xl p-3">
+                                    <div className="text-[10px] uppercase tracking-[0.5em] text-indigo-200/70 mb-2">Ticker</div>
+                                    <ul className="space-y-1 text-[11px] text-indigo-100/80 font-mono">
+                                        {fanPulse.ticker.map((line, idx) => (
+                                            <li key={idx}>• {line}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className={`bg-white rounded-3xl border border-amber-100 shadow-xl p-6 space-y-4 ${fanPulse ? '' : 'lg:col-span-3'}`}>
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-xs uppercase tracking-[0.4em] text-amber-500">Legacy Pressure Meter</h3>
+                                <HeartCrack className="text-amber-400" />
+                            </div>
+                            <div className="space-y-4">
+                                {pressureData.length > 0 ? pressureData.map(({ queen, reading }) => (
+                                    <div key={queen.id} className="space-y-1">
+                                        <div className="flex items-center justify-between text-sm">
+                                            <div className="flex items-center gap-2">
+                                                <img src={getQueenImg(queen.dexId)} className="w-8 h-8 rounded-full border border-amber-200" />
+                                                <span className="font-semibold text-gray-800">{queen.name}</span>
+                                            </div>
+                                            <span className="text-xs font-bold uppercase" style={{ color: reading.color }}>{reading.label}</span>
+                                        </div>
+                                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                            <div className="h-full rounded-full transition-all" style={{ width: `${reading.score}%`, backgroundColor: reading.color }} />
+                                        </div>
+                                        <p className="text-[11px] text-gray-500">{reading.commentary}</p>
+                                    </div>
+                                )) : (
+                                    <div className="text-xs text-gray-400">No pressure yet—give the season a few episodes!</div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {producerImpactEntries.length > 0 && (
+                        <div className="bg-gray-900 text-white rounded-3xl border border-gray-700 shadow-xl p-6">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-xs uppercase tracking-[0.4em] text-gray-300">Producer Playbook</h3>
+                                <Settings size={16} className="text-gray-400" />
+                            </div>
+                            <div className="mt-4 space-y-3">
+                                {producerImpactEntries.map(({ queen, card, swing }) => (
+                                    <div key={`${queen.id}-${card.id}`} className="flex items-center justify-between bg-gray-800/70 rounded-2xl px-4 py-3">
+                                        <div className="flex items-center gap-3">
+                                            <img src={getQueenImg(queen.dexId)} className="w-10 h-10 rounded-full border border-gray-700" />
+                                            <div>
+                                                <p className="text-sm font-semibold">{queen.name}</p>
+                                                <p className="text-[11px] uppercase tracking-[0.3em] text-gray-400">{card.label}</p>
+                                            </div>
+                                        </div>
+                                        <div className={`text-sm font-bold ${swing >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                                            {swing >= 0 ? '+' : ''}{swing}
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
                         </div>

@@ -3683,23 +3683,23 @@ export default function PokeDragRaceSimulator() {
     );
 
     const placementClassMap: Record<string, string> = {
-        'WIN': 'bg-gradient-to-b from-[#2563eb] to-[#1e3a8a] text-white border-[#1e3a8a] shadow-[inset_0_-3px_0_rgba(15,23,42,0.35)]',
-        'WIN+RTRN': 'bg-gradient-to-b from-[#4338ca] to-[#312e81] text-white border-[#1e1b4b] shadow-[inset_0_-3px_0_rgba(15,23,42,0.35)]',
-        'WIN+OUT': 'bg-gradient-to-b from-[#7c3aed] to-[#5b21b6] text-white border-[#4c1d95] shadow-[inset_0_-3px_0_rgba(15,23,42,0.35)]',
-        'TOP2': 'bg-gradient-to-b from-[#38bdf8] to-[#0284c7] text-[#0b1120] border-[#0369a1] shadow-[inset_0_-3px_0_rgba(8,47,73,0.3)]',
-        'HIGH': 'bg-gradient-to-b from-[#ede9fe] to-[#c7d2fe] text-[#1e3a8a] border-[#a5b4fc] shadow-[inset_0_-3px_0_rgba(30,64,175,0.2)]',
-        'SAFE': 'bg-gradient-to-b from-[#f8fafc] to-[#e5e7eb] text-[#1f2937] border-[#d1d5db] shadow-[inset_0_-3px_0_rgba(15,23,42,0.12)]',
-        'LOW': 'bg-gradient-to-b from-[#ffe4e6] to-[#fecdd3] text-[#9f1239] border-[#fb7185] shadow-[inset_0_-3px_0_rgba(127,29,29,0.22)]',
-        'BTM2': 'bg-gradient-to-b from-[#fca5a5] to-[#f87171] text-[#7f1d1d] border-[#ef4444] shadow-[inset_0_-3px_0_rgba(127,29,29,0.3)]',
-        'CHOCOLATE': 'bg-gradient-to-b from-[#fbbf24] to-[#b45309] text-[#422006] border-[#92400e] shadow-[inset_0_-3px_0_rgba(88,28,5,0.35)]',
-        'OUT': 'bg-gradient-to-b from-[#d1d5db] to-[#94a3b8] text-[#111827] border-[#475569] shadow-[inset_0_-3px_0_rgba(30,41,59,0.28)]',
-        'ELIM': 'bg-gradient-to-b from-[#fda4af] to-[#b91c1c] text-white border-[#7f1d1d] shadow-[inset_0_-3px_0_rgba(127,29,29,0.4)]',
-        'RUNNER-UP': 'bg-gradient-to-b from-[#ede9fe] to-[#c7d2fe] text-[#312e81] border-[#a5b4fc] shadow-[inset_0_-3px_0_rgba(49,46,129,0.25)]',
-        'WINNER': 'bg-gradient-to-b from-[#fef08a] to-[#facc15] text-[#78350f] border-[#ca8a04] shadow-[inset_0_-3px_0_rgba(120,53,15,0.3)]',
-        'RETURN': 'bg-gradient-to-b from-[#bbf7d0] to-[#059669] text-[#064e3b] border-[#047857] shadow-[inset_0_-3px_0_rgba(4,120,87,0.32)]',
-        'RTRN': 'bg-gradient-to-b from-[#bbf7d0] to-[#059669] text-[#064e3b] border-[#047857] shadow-[inset_0_-3px_0_rgba(4,120,87,0.32)]',
-        'N/A': 'bg-gradient-to-b from-[#f1f5f9] to-[#e2e8f0] text-[#64748b] border-[#cbd5f5] shadow-[inset_0_-3px_0_rgba(100,116,139,0.12)]',
-        '': 'bg-gradient-to-b from-[#f8fafc] to-[#e2e8f0] text-[#94a3b8] border-[#cbd5f5] shadow-[inset_0_-3px_0_rgba(148,163,184,0.1)]',
+        'WIN': 'bg-[#2563eb] text-white border-[#1e3a8a]',
+        'WIN+RTRN': 'bg-[#4338ca] text-white border-[#312e81]',
+        'WIN+OUT': 'bg-[#7c3aed] text-white border-[#5b21b6]',
+        'TOP2': 'bg-[#38bdf8] text-[#0b1120] border-[#0284c7]',
+        'HIGH': 'bg-[#c7d2fe] text-[#1e3a8a] border-[#a5b4fc]',
+        'SAFE': 'bg-[#e5e7eb] text-[#1f2937] border-[#d1d5db]',
+        'LOW': 'bg-[#fecdd3] text-[#9f1239] border-[#fb7185]',
+        'BTM2': 'bg-[#f87171] text-[#7f1d1d] border-[#ef4444]',
+        'CHOCOLATE': 'bg-[#fbbf24] text-[#422006] border-[#92400e]',
+        'OUT': 'bg-[#94a3b8] text-[#111827] border-[#475569]',
+        'ELIM': 'bg-[#b91c1c] text-white border-[#7f1d1d]',
+        'RUNNER-UP': 'bg-[#c7d2fe] text-[#312e81] border-[#a5b4fc]',
+        'WINNER': 'bg-[#facc15] text-[#78350f] border-[#ca8a04]',
+        'RETURN': 'bg-[#34d399] text-[#064e3b] border-[#047857]',
+        'RTRN': 'bg-[#34d399] text-[#064e3b] border-[#047857]',
+        'N/A': 'bg-[#e2e8f0] text-[#64748b] border-[#cbd5f5]',
+        '': 'bg-[#e2e8f0] text-[#94a3b8] border-[#cbd5f5]',
     };
 
     const rankLabels = (() => {
@@ -3777,7 +3777,9 @@ export default function PokeDragRaceSimulator() {
                       </td>
                       <td className="px-4 py-3 border border-[#9ca3af]">
                         <div className="flex items-center gap-3">
-                          <img src={getQueenImg(queen.dexId)} className="w-14 h-14 rounded-full border-2 border-[#9ca3af] bg-white" />
+                          <div className="w-14 h-14 rounded-full border-2 border-[#9ca3af] bg-white overflow-hidden">
+                            <img src={getQueenImg(queen.dexId)} className="w-full h-full object-cover object-center scale-125" />
+                          </div>
                           <div className="space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="font-bold text-sm tracking-tight">{queen.name}</span>

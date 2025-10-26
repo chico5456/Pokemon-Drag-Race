@@ -1072,6 +1072,86 @@ const JUDGE_PROFILES: JudgeProfile[] = [
     specialties: ['dance', 'talent', 'performance', 'charisma'],
     image: 'https://play.pokemonshowdown.com/sprites/trainers/korrina.png',
     signature: 'Momentum, stamina, and sparkle—keep the energy sky high.'
+  },
+  {
+    id: 'steven',
+    name: 'Steven Stone',
+    title: 'Hoenn Champion',
+    specialties: ['design', 'runway', 'story', 'makeover'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/steven.png',
+    signature: 'Polish every detail until it gleams like a rare stone.'
+  },
+  {
+    id: 'bea',
+    name: 'Bea',
+    title: 'Galar Dojo Prodigy',
+    specialties: ['dance', 'talent', 'performance', 'charisma'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/bea.png',
+    signature: 'Discipline, drive, and deadly choreography win battles.'
+  },
+  {
+    id: 'fantina',
+    name: 'Fantina',
+    title: 'Hearthome Glam Leader',
+    specialties: ['runway', 'rusical', 'singing', 'story'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/fantina.png',
+    signature: 'Haunt the runway with drama and leave them spellbound.'
+  },
+  {
+    id: 'volkner',
+    name: 'Volkner',
+    title: 'Sunyshore Innovator',
+    specialties: ['branding', 'rumix', 'design', 'performance'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/volkner.png',
+    signature: 'Shock us with fresh energy or risk a total blackout.'
+  },
+  {
+    id: 'skyla',
+    name: 'Skyla',
+    title: 'Mistralton Sky Ace',
+    specialties: ['runway', 'lipsync', 'charisma', 'talent'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/skyla.png',
+    signature: 'Lift off with aerial charisma and never touch down.'
+  },
+  {
+    id: 'opal',
+    name: 'Opal',
+    title: 'Ballonlea Icon',
+    specialties: ['story', 'runway', 'makeover', 'improv'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/opal.png',
+    signature: 'Surprise me with whimsy and wisdom in equal measure.'
+  },
+  {
+    id: 'kahili',
+    name: 'Kahili',
+    title: 'Alola Elite Four',
+    specialties: ['runway', 'design', 'performance', 'story'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/kahili.png',
+    signature: 'Soar across the stage like you own every sky in Alola.'
+  },
+  {
+    id: 'roxie',
+    name: 'Roxie',
+    title: 'Virbank Punk Virtuoso',
+    specialties: ['singing', 'talent', 'branding', 'charisma'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/roxie.png',
+    signature: 'If the number doesn’t thrash, trash it and start over.'
+  },
+  {
+    id: 'caitlin',
+    name: 'Caitlin',
+    title: 'Battle Maison Heiress',
+    specialties: ['acting', 'improv', 'story', 'charisma'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/caitlin.png',
+    signature: 'Sweep the stage with elegance and psychic-level focus.'
+  },
+  {
+    id: 'grimsley',
+    name: 'Grimsley',
+    title: 'Unova High Roller',
+    specialties: ['comedy', 'story', 'branding', 'runway'],
+    image: 'https://play.pokemonshowdown.com/sprites/trainers/grimsley.png',
+    signature: 'Play the odds, take the risk, and make the payoff iconic.'
   }
 ];
 
@@ -1101,26 +1181,263 @@ const MIXED_CRITIQUES = [
   '{queen}, your charisma saved a middling {challenge}; polish the details for next week.'
 ];
 
-const PERFORMANCE_LIBRARY = {
-  slay: [
-    '{queen} detonated the {challenge} stage with a finale pose that shook the judges table.',
-    '{queen} blended vocals and choreography so tight the crew rewatched the playback twice.',
-    '{queen} delivered a Mega Evolution reveal mid-{challenge} and the crowd screamed.',
-    '{queen} commanded the {challenge} spotlight with gym-leader level authority.'
-  ],
-  flop: [
-    '{queen} blanked on choreography and improvised jazz hands—chaos ensued.',
-    "{queen}'s verse tripped over itself, leaving the {challenge} crew wincing.",
-    '{queen} chased the beat all number long and never fully caught it.',
-    'Wardrobe betrayed {queen} mid-{challenge}, and she never fully recovered.'
-  ],
-  gag: [
-    '{queen} pulled a live Pikachu prop for the {challenge} and everyone levitated.',
-    '{queen} threw shade mid-number that sparked an instant meme in the werkroom monitors.',
-    '{queen} remixed the choreography on the fly and the other queens struggled to keep up.',
-    '{queen} whispered a gag line to the judges mid-runway that will trend for weeks.'
-  ]
-} as const;
+const PERFORMANCE_LIBRARY: Record<'default' | ChallengeType, Record<'slay' | 'flop' | 'gag', string[]>> = {
+  default: {
+    slay: [
+      '{queen} detonated the {challenge} stage with a finale pose that shook the judges table.',
+      '{queen} commanded the {challenge} spotlight with gym-leader level authority.',
+      '{queen} delivered a Mega Evolution reveal mid-{challenge} and the crowd screamed.'
+    ],
+    flop: [
+      '{queen} chased the pacing of {challenge} and never fully caught it.',
+      'Wardrobe betrayed {queen} mid-{challenge}, and she never fully recovered.',
+      '{queen} kept searching for the moment and the {challenge} clock ran out.'
+    ],
+    gag: [
+      '{queen} pulled a live Pikachu prop for the {challenge} and everyone levitated.',
+      '{queen} threw shade mid-number that sparked an instant meme in the werkroom monitors.',
+      '{queen} whispered a gag line to the judges mid-runway that will trend for weeks.'
+    ]
+  },
+  acting: {
+    slay: [
+      '{queen} flipped between characters in {challenge} like a seasoned Pokéstar.',
+      '{queen} landed every beat of the {challenge} script with blockbuster conviction.',
+      '{queen} improvised a twist ending in {challenge} that left the judges clutching pearls.'
+    ],
+    flop: [
+      '{queen} went up on lines mid-{challenge} and the scene fell flat.',
+      '{queen} delivered every confession to the wrong camera in {challenge}.',
+      '{queen} forgot the cue and the {challenge} scene partners went silent.'
+    ],
+    gag: [
+      '{queen} broke the fourth wall in {challenge} and the studio lost it.',
+      '{queen} served a soap-opera slap in {challenge} that shook the werkroom.',
+      '{queen} rewrote the {challenge} script on the spot and somehow it worked.'
+    ]
+  },
+  comedy: {
+    slay: [
+      '{queen} machine-gunned punchlines through {challenge} with zero mercy.',
+      '{queen} let the {challenge} jokes snowball until the judges cried.',
+      '{queen} read everyone in {challenge} and still kept the room on her side.'
+    ],
+    flop: [
+      '{queen} paused for laughs during {challenge} that never arrived.',
+      '{queen} recycled a joke from rehearsal and the {challenge} crowd groaned.',
+      '{queen} lost the rhythm of {challenge} and every punchline whiffed.'
+    ],
+    gag: [
+      '{queen} tossed in a Pokédex read mid-{challenge} that became instant canon.',
+      '{queen} turned a prop mishap into meme-worthy improv during {challenge}.',
+      '{queen} roasted the judges in {challenge} and they begged for more.'
+    ]
+  },
+  dance: {
+    slay: [
+      '{queen} hit every eight-count of {challenge} sharper than a Cut TM.',
+      '{queen} stuck the floor split finale of {challenge} without breaking a sweat.',
+      '{queen} led the {challenge} formation with Elite Four stamina.'
+    ],
+    flop: [
+      '{queen} slid off the mark and the {challenge} choreo collapsed.',
+      '{queen} forgot the lift in {challenge} and the momentum flatlined.',
+      '{queen} counted out loud through {challenge}—the dancers gagged for the wrong reason.'
+    ],
+    gag: [
+      '{queen} threw in an aerial cartwheel mid-{challenge} just to show off.',
+      '{queen} syncopated the {challenge} choreo and the crowd howled.',
+      '{queen} moonwalked across the {challenge} runway and stole the episode.'
+    ]
+  },
+  design: {
+    slay: [
+      '{queen} stitched {challenge} couture that could headline Lumiose Fashion Week.',
+      '{queen} delivered hand-beaded glory for {challenge} with zero hot glue burns.',
+      '{queen} engineered a reveal in {challenge} that had seams nowhere to hide.'
+    ],
+    flop: [
+      '{queen} ran out of fabric mid-{challenge} and safety-pinned a dream together.',
+      '{queen} hot-glued the hem for {challenge} and it showed every wobble.',
+      '{queen} built a silhouette in {challenge} that the judges called pure daycare crafts.'
+    ],
+    gag: [
+      '{queen} turned Pokéball foam into Met Gala armor for {challenge}.',
+      '{queen} revealed a second look under {challenge} and the workroom screamed.',
+      '{queen} matched the runway lights with reflective scales in {challenge}.'
+    ]
+  },
+  rusical: {
+    slay: [
+      '{queen} belted the climax of {challenge} like the theatre was hers alone.',
+      '{queen} danced and sang through {challenge} with champion breath control.',
+      '{queen} harmonized the {challenge} finale and dragged the cast to glory.'
+    ],
+    flop: [
+      '{queen} missed the high note in {challenge} and the orchestra winced.',
+      '{queen} lost character halfway through {challenge} and never recovered.',
+      '{queen} forgot the choreography in {challenge} and walked the chorus.'
+    ],
+    gag: [
+      '{queen} hit a whistle tone in {challenge} that echoed backstage.',
+      '{queen} spun a cape reveal mid-{challenge} and the theatre erupted.',
+      '{queen} ad-libbed a harmony in {challenge} that saved the entire cast.'
+    ]
+  },
+  makeover: {
+    slay: [
+      '{queen} cloned her signature for {challenge} and the family resemblance gagged us.',
+      '{queen} mentored her partner through {challenge} like a couture coach.',
+      '{queen} balanced both makeovers in {challenge} with flawless detail work.'
+    ],
+    flop: [
+      '{queen} forgot to blend her partner’s contour during {challenge}.',
+      '{queen} delivered mismatched silhouettes in {challenge} and the judges clocked it.',
+      '{queen} styled clashing wigs for {challenge} and the twins looked lost.'
+    ],
+    gag: [
+      '{queen} revealed twin transformations in {challenge} that stole the spotlight.',
+      '{queen} choreographed a duo strut in {challenge} that broke the runway.',
+      '{queen} turned her partner into a perfect mini-me for {challenge}.'
+    ]
+  },
+  improv: {
+    slay: [
+      '{queen} riffed through {challenge} like comedy lightning.',
+      '{queen} tossed setups and punchlines in {challenge} faster than a Quick Attack.',
+      '{queen} kept every partner afloat in {challenge} without breaking character.'
+    ],
+    flop: [
+      '{queen} answered every {challenge} prompt with dead air.',
+      '{queen} broke character five times in {challenge} and the judges caught each one.',
+      '{queen} defaulted to nervous giggles during {challenge} instead of jokes.'
+    ],
+    gag: [
+      '{queen} spun a plot twist in {challenge} that even the producers didn’t plan.',
+      '{queen} yes-anded her way into legend status during {challenge}.',
+      '{queen} invented a recurring character in {challenge} that stole the episode.'
+    ]
+  },
+  rumix: {
+    slay: [
+      '{queen} recorded a verse for {challenge} that slapped harder than a Hyper Beam.',
+      '{queen} nailed breathless choreography while spitting bars in {challenge}.',
+      '{queen} stacked harmonies on her {challenge} bridge like a pro producer.'
+    ],
+    flop: [
+      '{queen} tripped over her own lyrics during {challenge}.',
+      '{queen} came in off-beat for {challenge} and never found the pocket.',
+      '{queen} wrote filler bars for {challenge} and the judges clocked every word.'
+    ],
+    gag: [
+      '{queen} dropped a Poké rap Easter egg in {challenge} that blew up the main stage.',
+      '{queen} staged pyros during her {challenge} verse and the cast screamed.',
+      '{queen} flipped to a double-time flow mid-{challenge} and dared the rest to follow.'
+    ]
+  },
+  snatch_game: {
+    slay: [
+      '{queen} volleyed Snatch Game jokes in {challenge} like psychic attacks.',
+      '{queen} embodied her celebrity in {challenge} so well the panel forgot the real one.',
+      '{queen} interrupted the {challenge} host with reads that became instant classics.'
+    ],
+    flop: [
+      '{queen} answered every {challenge} question with the same tired joke.',
+      '{queen} blanked on her celebrity voice during {challenge}.',
+      '{queen} read the cue cards in {challenge} and the judges winced.'
+    ],
+    gag: [
+      '{queen} unleashed a Poké pun barrage in {challenge} nobody saw coming.',
+      '{queen} tag-teamed the panel in {challenge} and owned every laugh.',
+      '{queen} ad-libbed a commercial break bit in {challenge} that trended instantly.'
+    ]
+  },
+  ball: {
+    slay: [
+      '{queen} stormed all three {challenge} categories like a runway tyrant.',
+      '{queen} delivered craftsmanship, camp, and couture across {challenge}.',
+      '{queen} balanced concept and polish in every {challenge} look.'
+    ],
+    flop: [
+      '{queen} ran out of time on look two and the {challenge} panel saw every stitch.',
+      '{queen} repeated a silhouette in {challenge} and the judges were bored.',
+      '{queen} lost her third reveal in {challenge} and the ball unraveled.'
+    ],
+    gag: [
+      '{queen} matched her {challenge} looks to legendary Pokémon eras.',
+      '{queen} wheeled out a moving prop for {challenge} that sent the room into orbit.',
+      '{queen} choreographed transitions between {challenge} looks and broke the runway rules.'
+    ]
+  },
+  branding: {
+    slay: [
+      '{queen} pitched {challenge} merch so slick the investors called mid-episode.',
+      '{queen} fused comedy and concept in {challenge} like a marketing mastermind.',
+      '{queen} made the {challenge} slogan trend before critiques ended.'
+    ],
+    flop: [
+      '{queen} forgot to explain the product in {challenge}.',
+      '{queen} branded her {challenge} item with three different names on stage.',
+      '{queen} left the panel unsure if {challenge} was perfume or pothole filler.'
+    ],
+    gag: [
+      '{queen} turned the {challenge} jingle into an earworm bop.',
+      '{queen} launched a meme-able catchphrase in {challenge}.',
+      '{queen} rolled in a billboard reveal for {challenge} like a true mogul.'
+    ]
+  },
+  talent: {
+    slay: [
+      '{queen} showcased a signature talent in {challenge} that could tour tomorrow.',
+      '{queen} blended vocals, stunts, and story in {challenge}.',
+      '{queen} treated {challenge} like a stadium opener and left smoke on stage.'
+    ],
+    flop: [
+      '{queen} dropped her prop during {challenge} and never recovered.',
+      '{queen} picked a talent for {challenge} she clearly learned last night.',
+      '{queen} let nerves derail every beat of {challenge}.'
+    ],
+    gag: [
+      '{queen} breathed fire during {challenge} just because she could.',
+      '{queen} switched talents mid-{challenge} and still nailed both.',
+      '{queen} turned {challenge} into a multi-trick spectacle that stunned the judges.'
+    ]
+  },
+  roast: {
+    slay: [
+      '{queen} roasted the panel in {challenge} and they tipped her for it.',
+      '{queen} read every queen in {challenge} with sniper precision.',
+      '{queen} balanced brutality and charm throughout {challenge}.'
+    ],
+    flop: [
+      '{queen} apologized between every joke in {challenge}.',
+      '{queen} fumbled the cue cards in {challenge} and the silence was loud.',
+      '{queen} went off-script in {challenge} and lost the punchline every time.'
+    ],
+    gag: [
+      '{queen} dragged the judges in {challenge} and still got a standing ovation.',
+      '{queen} roasted herself mid-{challenge} and the audience screamed.',
+      '{queen} flipped a heckle during {challenge} into her biggest laugh.'
+    ]
+  },
+  girl_groups: {
+    slay: [
+      '{queen} captained harmonies through {challenge} like a seasoned pop leader.',
+      '{queen} choreographed {challenge} formations that snapped the judges to attention.',
+      '{queen} penned the hook for {challenge} and it refuses to leave our heads.'
+    ],
+    flop: [
+      '{queen} forgot her lyric in {challenge} and the verse derailed.',
+      '{queen} missed the group choreography in {challenge} and bumped everyone off.',
+      '{queen} drowned out the harmony in {challenge} with off-key ad-libs.'
+    ],
+    gag: [
+      '{queen} staged a mic drop moment in {challenge} that sold the single.',
+      '{queen} orchestrated a power pose ending for {challenge} that gagged the panel.',
+      '{queen} changed the key mid-{challenge} and dared the group to keep up.'
+    ]
+  }
+};
 
 const DRAMA_TEMPLATES = {
   werkroom: [
@@ -1303,8 +1620,10 @@ const createPerformanceMoments = ({
   const midIndex = scores.length > 2 ? Math.floor(Math.random() * (scores.length - 2)) + 1 : 0;
   const gag = scores[midIndex];
 
-  const buildDetail = (tone: keyof typeof PERFORMANCE_LIBRARY, queenName: string) =>
-      fillTemplate(sample(PERFORMANCE_LIBRARY[tone]), {
+  const toneLibrary = PERFORMANCE_LIBRARY[challenge.type] ?? PERFORMANCE_LIBRARY.default;
+
+  const buildDetail = (tone: keyof typeof toneLibrary, queenName: string) =>
+      fillTemplate(sample(toneLibrary[tone]), {
           queen: queenName,
           challenge: challenge.name
       });
@@ -1532,6 +1851,36 @@ const getConfessional = (
         '': []
     } as Record<Placement | '', string[]>;
 
+    const addLines = (placementKey: Placement, lines: string[]) => {
+        if (!templates[placementKey]) {
+            templates[placementKey] = [];
+        }
+        templates[placementKey].push(...lines);
+    };
+
+    const placementHistory = queen.trackRecord;
+    const lastPlacement = placementHistory[placementHistory.length - 1];
+    const topPlacements: Placement[] = ['WIN', 'WIN+RTRN', 'WIN+OUT', 'TOP2', 'HIGH'];
+    const dangerPlacements: Placement[] = ['LOW', 'BTM2', 'OUT', 'ELIM'];
+
+    const trailingSafe = (() => {
+        let count = 0;
+        for (let i = placementHistory.length - 1; i >= 0; i -= 1) {
+            if (placementHistory[i] === 'SAFE') {
+                count += 1;
+            } else {
+                break;
+            }
+        }
+        return count;
+    })();
+
+    const winsEarned = placementHistory.filter(p => p === 'WIN' || p === 'WIN+RTRN' || p === 'WIN+OUT').length;
+    const bottomTrips = placementHistory.filter(p => p === 'BTM2').length;
+    const safeRunWithCurrent = placement === 'SAFE' ? trailingSafe + 1 : 0;
+    const totalWinsWithCurrent = placement === 'WIN' ? winsEarned + 1 : winsEarned;
+    const totalBottomsWithCurrent = placement === 'BTM2' ? bottomTrips + 1 : bottomTrips;
+
     // Contextual Confessionals
     if (phase === 'JUDGING' && activeQueens) {
         // Check for bottom streak
@@ -1544,6 +1893,80 @@ const getConfessional = (
         if (placement === 'WIN' && recentPlacements.includes('BTM2')) {
              templates.WIN.push("From the bottom to the top! Redemption feels so good.");
              templates.WIN.push("They doubted me, but this phoenix keeps rising.");
+        }
+
+        const wasInDangerLast = lastPlacement ? dangerPlacements.includes(lastPlacement) : false;
+        const wasOnTopLast = lastPlacement ? topPlacements.includes(lastPlacement) : false;
+
+        if (placement === 'WIN' && wasInDangerLast) {
+            addLines('WIN', [
+                'Bottom last week, crown this week. That\'s how you flip a storyline.',
+                'From tears to trophies—nobody is ready for this rebound.',
+                'One episode ago I was lip syncing; tonight I\'m choreographing the victory pose.',
+                'The producers wanted drama, I gave them a comeback coronation.'
+            ]);
+        }
+
+        if (placement === 'TOP2' && wasInDangerLast) {
+            addLines('TOP2', [
+                'I was just fighting for my life and now I\'m standing as top two.',
+                'This time I\'m driving the story instead of surviving it.',
+                'Call it a rebound episode—I just vaulted from danger to power.',
+                'Bottom last week, back in the spotlight. That\'s momentum, baby.'
+            ]);
+        }
+
+        if (placement === 'HIGH' && wasInDangerLast) {
+            addLines('HIGH', [
+                'We were trading blows last episode and now the judges are praising me.',
+                'High placement after scraping the bottom? That\'s a glow-up moment.',
+                'They doubted me yesterday; today they\'re obsessed again.',
+                'I left the danger zone and rewrote the narrative overnight.'
+            ]);
+        }
+
+        if (placement === 'BTM2' && wasOnTopLast) {
+            addLines('BTM2', [
+                'Top placements to bottom two in a week? The whiplash is real.',
+                'I went from leading the pack to lip syncing for my life.',
+                'The crash after last week\'s praise hurts worse than the heels.',
+                'They crowned me last week and now they want blood.'
+            ]);
+        }
+
+        if (placement === 'LOW' && wasOnTopLast) {
+            addLines('LOW', [
+                'From critiques to claws—being praised last week did not save me.',
+                'How do you go from top billing to scraping by? Ask me after tonight.',
+                'Last episode I was celebrated, now I\'m clinging on by rhinestones.',
+                'They loved me yesterday and today I\'m getting read for filth.'
+            ]);
+        }
+
+        if (safeRunWithCurrent >= 3) {
+            addLines('SAFE', [
+                'Three weeks of safe? I\'m becoming the narrator, not the headline.',
+                'Safe streak unlocked—now I need a win before they forget my name.',
+                'If I hear "you may leave the stage" again I\'m staging a coup.',
+                'Apparently I\'m the safety queen—time to shatter that ceiling.',
+                'Another safe placement, another chip on my shoulder to go harder.'
+            ]);
+        }
+
+        if (placement === 'BTM2' && totalBottomsWithCurrent >= 3) {
+            addLines('BTM2', [
+                'Third trip to the bottom—I\'m building a condo there.',
+                'How many times can I lip sync before I evolve? Apparently three and counting.',
+                'Bottom two again—if this were baseball I\'d be out, but I\'m swinging harder.'
+            ]);
+        }
+
+        if (placement === 'WIN' && totalWinsWithCurrent >= 3) {
+            addLines('WIN', [
+                'Third win! That\'s a dynasty in the making.',
+                'Three badges collected—I\'m one step from the championship.',
+                'Hat trick secured; the others better start plotting twists.'
+            ]);
         }
     }
 
@@ -3767,7 +4190,7 @@ export default function PokeDragRaceSimulator() {
         }
 
         if (priorityA === 3) {
-            const elimDiff = getEliminationIndex(a) - getEliminationIndex(b);
+            const elimDiff = getEliminationIndex(b) - getEliminationIndex(a);
             if (elimDiff !== 0) {
                 return elimDiff;
             }
